@@ -2,6 +2,7 @@
 
 import base64
 import json
+import os
 
 from .calcolo import CAMPI, DATI
 
@@ -21,4 +22,8 @@ def scrivi(destinazione, rapporto, testi, progetto=None, dal=None, al=None):
             .replace("__TITOLO__", testi["titolo"])
             .replace("__LOGO__", base64.b64encode((DATI / "logo-horizonpeak.png").read_bytes()).decode())
             .replace("__DATI__", carico))
-    destinazione.write_text(html, encoding="utf-8")
+    # Si scrive accanto e poi si sostituisce: la pagina aperta, che si ricarica
+    # da sola, non deve mai trovare il file scritto a meta'.
+    temporaneo = destinazione.with_name(destinazione.name + ".tmp")
+    temporaneo.write_text(html, encoding="utf-8")
+    os.replace(temporaneo, destinazione)

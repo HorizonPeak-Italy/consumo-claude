@@ -304,6 +304,29 @@ footer a { color: inherit; }
     ordP: { col: 3, giu: true }, ordS: { col: 0, giu: true }, tutteSessioni: false
   };
 
+  // Ricarica ogni 5 minuti per mostrare i dati rigenerati. La vista (periodo,
+  // progetto, ordinamenti, punto della pagina) si salva prima e si ritrova dopo.
+  var CHIAVE_VISTA = "consumo-claude-vista", salvato = null;
+  try {
+    var letto = JSON.parse(sessionStorage.getItem(CHIAVE_VISTA));
+    if (letto && Date.now() - letto.quando < 15 * 60 * 1000) salvato = letto;
+  } catch (e) {}
+  if (salvato) {
+    stato.dal = salvato.dal; stato.al = salvato.al;
+    stato.progetto = salvato.progetto && D.progetti[salvato.progetto] ? salvato.progetto : null;
+    stato.ordP = salvato.ordP || stato.ordP; stato.ordS = salvato.ordS || stato.ordS;
+  }
+  function salvaVista() {
+    try {
+      sessionStorage.setItem(CHIAVE_VISTA, JSON.stringify({
+        quando: Date.now(), dal: stato.dal, al: stato.al, progetto: stato.progetto,
+        periodo: document.getElementById("periodo").value, ordP: stato.ordP, ordS: stato.ordS,
+        scroll: window.scrollY
+      }));
+    } catch (e) {}
+  }
+  setTimeout(function () { salvaVista(); location.reload(); }, 5 * 60 * 1000);
+
   function spostaGiorni(n) {
     var d = new Date(); d.setDate(d.getDate() - n);
     return giorno(d.getTime() / 1000);
@@ -606,6 +629,12 @@ footer a { color: inherit; }
     var sel = document.getElementById("periodo");
     sel.innerHTML = PERIODI.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + "</option>"; }).join("");
     sel.value = stato.dal || stato.al ? "su" : "tutto";
+    if (salvato && salvato.periodo) {
+      sel.value = salvato.periodo;
+      // Un periodo come "oggi" si ricalcola: dopo mezzanotte e' un altro giorno.
+      var scelto = PERIODI.filter(function (x) { return x[0] === sel.value; })[0];
+      if (scelto && scelto[2]) { var rr = scelto[2](); stato.dal = rr[0]; stato.al = rr[1]; }
+    }
     var ultimoPeriodo = sel.value;
     function sceltoPeriodo() {
       if (sel.value === ultimoPeriodo) return;
@@ -685,6 +714,7 @@ footer a { color: inherit; }
   menuPeriodo();
   listino();
   disegna();
+  if (salvato && salvato.scroll) window.scrollTo(0, salvato.scroll);
   var attesa;
   window.addEventListener("resize", function () { clearTimeout(attesa); attesa = setTimeout(function () { grafico(celleScelte()); }, 150); });
 })();

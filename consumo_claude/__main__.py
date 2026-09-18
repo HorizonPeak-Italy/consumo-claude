@@ -90,12 +90,14 @@ def argomenti(argv):
     a.add_argument("--json", action="store_true", help="stampa i dati calcolati in JSON, per altri programmi")
     a.add_argument("--offline", action="store_true", help="non aggiornare cambio e listino prezzi da internet")
     a.add_argument("--listino", "--prices", action="store_true", help="mostra il listino prezzi usato")
+    a.add_argument("--continuo", "--watch", nargs="?", const=5, type=float, metavar="MINUTI",
+                   help="rigenera la pagina ogni MINUTI (5 se non indicati) finche' non si chiude con Ctrl+C")
     a.add_argument("--tariffa", "--rate", type=float, metavar="N",
                    help="tariffa oraria del lavoro umano (predefinita 10 euro, o 45 dollari in inglese)")
     a.add_argument("--senza-archivio", "--no-cache", action="store_true", help="rileggi tutte le cronologie")
     a.add_argument("--impostazioni", "--settings", action="store_true",
                    help="crea (se manca) e mostra il file delle impostazioni personali")
-    return a.parse_args(argv)
+    return a.parse_intermixed_args(argv)
 
 
 def mostra_impostazioni():
@@ -131,7 +133,39 @@ def taglia(testo, n):
 
 
 def main(argv=None):
-    arg = argomenti(sys.argv[1:] if argv is None else argv)
+    argv = sys.argv[1:] if argv is None else argv
+    arg = argomenti(argv)
+    if arg.continuo:
+        return continuo(argv, arg.continuo)
+    return _main(arg)
+
+
+def continuo(argv, minuti):
+    """Rigenera la pagina ogni tot minuti; il browser la apre solo la prima volta."""
+    import time
+    resto, i = [], 0
+    while i < len(argv):      # si toglie --continuo e il suo eventuale numero
+        x = argv[i]
+        if x in ("--continuo", "--watch"):
+            if i + 1 < len(argv) and re.fullmatch(r"\d+(\.\d+)?", argv[i + 1]):
+                i += 1
+        elif not x.startswith(("--continuo=", "--watch=")):
+            resto.append(x)
+        i += 1
+    primo = True
+    try:
+        while True:
+            codice = _main(argomenti(resto + ([] if primo else ["--non-aprire"])))
+            if codice:
+                return codice
+            primo = False
+            print("\n(%s)\n" % datetime.now().strftime("%H:%M"), flush=True)
+            time.sleep(max(minuti, 0.5) * 60)
+    except KeyboardInterrupt:
+        return 0
+
+
+def _main(arg):
     if arg.impostazioni:
         mostra_impostazioni()
         return 0

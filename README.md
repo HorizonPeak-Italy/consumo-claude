@@ -125,6 +125,12 @@ calcolati, per altri programmi), `--offline`.
 **Da sapere:** `/consumo` dentro Claude passa il riepilogo nella conversazione e
 consuma qualche migliaio di token ogni volta. Da terminale non costa nulla.
 
+**Pagina sempre aggiornata:** la pagina si ricarica da sola ogni 5 minuti,
+restando sul periodo e sul progetto scelti. Per avere anche i dati freschi,
+lascia aperto in un terminale `consumo-claude --continuo`, che la rigenera ogni
+5 minuti (`--continuo 10` per ogni 10). In alto a destra la pagina dice fino a
+che ora arrivano i dati.
+
 ## Come si calcola
 
 - **Token e costo** vengono dalle cronologie, risposta per risposta, con la
@@ -233,7 +239,9 @@ Claude Code: `consumo-claude --help`. The language follows your system
 
 `/consumo` inside Claude puts the summary in the conversation and costs a few
 thousand tokens each time; the standalone command costs nothing.
-`consumo-claude --prices` shows the price list in use.
+`consumo-claude --prices` shows the price list in use. The page reloads itself every
+5 minutes; `consumo-claude --watch` regenerates it every 5 minutes so it always
+shows fresh data.
 
 ## How it is calculated
 

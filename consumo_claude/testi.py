@@ -100,7 +100,7 @@ TESTI = {
         "in_valuta": "In euro",
         "tema_scuro": "Tema scuro",
         "modelli_nota": "Percentuale sul costo totale. Passa sopra una riga per vedere i token.",
-        "aggiornata": "Aggiornata il %s",
+        "aggiornata": "Dati fino al %s",
         "firma": "Consumo Claude, di Horizon Peak srls",
     },
     "en": {
@@ -198,7 +198,7 @@ TESTI = {
         "in_valuta": "Converted",
         "tema_scuro": "Dark theme",
         "modelli_nota": "Share of total cost. Hover a row to see the tokens.",
-        "aggiornata": "Updated %s",
+        "aggiornata": "Data up to %s",
         "firma": "Claude Usage (consumo-claude), by Horizon Peak srls",
     },
 }
