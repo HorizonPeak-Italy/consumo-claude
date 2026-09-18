@@ -104,6 +104,7 @@ svg text { fill: var(--testo-2); font-size: 11px; }
   box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; z-index: 10;
 }
 .metodo p { color: var(--testo-2); margin: 0 0 8px; font-size: 14px; }
+.nota-fondo { color: var(--testo-3); font-size: 13px; margin: 0 0 6px; }
 footer { color: var(--testo-3); font-size: 13px; margin-top: 24px; text-align: center; }
 footer a { color: inherit; }
 </style>
@@ -151,6 +152,7 @@ footer a { color: inherit; }
   <section class="blocco" id="listino"></section>
 
   <section class="blocco metodo" id="metodo"></section>
+  <div id="note-fondo"></div>
 
   <footer id="piede"></footer>
 </main>
@@ -459,9 +461,13 @@ footer a { color: inherit; }
     document.getElementById("t-modelli").textContent = T.modelli;
     document.getElementById("t-progetti").textContent = T.progetti;
     document.getElementById("t-clic").textContent = T.clic_progetto;
-    avvisiFissi = [T.avviso_abbonamento, T.avviso_condivisione];
-    if (D.illeggibili === 1) avvisiFissi.push(T.avviso_illeggibili_1);
-    else if (D.illeggibili) avvisiFissi.push(sost(T.avviso_illeggibili, numero(D.illeggibili)));
+    // In cima solo l'avviso che cambia il modo di leggere le cifre; le note
+    // su condivisione e righe incomplete vanno in fondo, in tono minore.
+    avvisiFissi = [T.avviso_abbonamento];
+    var note = [T.avviso_condivisione];
+    if (D.illeggibili === 1) note.push(T.avviso_illeggibili_1);
+    else if (D.illeggibili) note.push(sost(T.avviso_illeggibili, numero(D.illeggibili)));
+    document.getElementById("note-fondo").innerHTML = note.map(function (a) { return '<p class="nota-fondo">' + esc(a) + "</p>"; }).join("");
 
     var az = P.metodo_b_minuti_per_azione;
     var elenco = Object.keys(az).map(function (k) { return (T.azioni_nomi[k] || k) + " " + az[k] + " " + T.minuti; }).join(", ");
