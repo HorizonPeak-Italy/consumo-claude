@@ -148,6 +148,8 @@ footer a { color: inherit; }
     <div id="altre"></div>
   </section>
 
+  <section class="blocco" id="listino"></section>
+
   <section class="blocco metodo" id="metodo"></section>
 
   <footer id="piede"></footer>
@@ -198,6 +200,11 @@ footer a { color: inherit; }
   function giorno(sec) {
     var d = new Date(sec * 1000);
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // Sostituisce i %s nell'ordine. Con una funzione, "$" nei valori resta "$".
+  function sost(testo) {
+    var valori = Array.prototype.slice.call(arguments, 1), i = 0;
+    return testo.replace(/%s/g, function () { return String(valori[i++]); });
   }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; });
@@ -413,13 +420,14 @@ footer a { color: inherit; }
 
   function tabellaSessioni() {
     var tab = document.getElementById("tab-sessioni");
-    document.getElementById("t-sessioni").textContent = stato.progetto ? T.sessioni_di.replace("%s", D.progetti[stato.progetto].nome) : T.sessioni;
+    document.getElementById("t-sessioni").textContent = stato.progetto ? sost(T.sessioni_di, D.progetti[stato.progetto].nome) : T.sessioni;
     var gruppi = {};
     celleScelte().forEach(function (c) { (gruppi[c[0]] = gruppi[c[0]] || []).push(c); });
     var conProgetto = !stato.progetto;
     var righe = Object.keys(gruppi).map(function (sid) {
       var s = D.sessioni[sid], r = riepiloga(gruppi[sid]), u = umano(r), d = giorno(s.inizio);
-      var k = [s.inizio, s.titolo], c = [d, s.titolo];
+      var titolo = s.titolo || T.senza_titolo;
+      var k = [s.inizio, titolo], c = [d, titolo];
       if (conProgetto) { k.push(D.progetti[s.progetto].nome); c.push(D.progetti[s.progetto].nome); }
       k.push(r.minuti, r.token, r.costo, r.ore, r.personeSessione, u);
       c.push(durata(r.minuti), token(r.token), soldi(r.costo, "USD"), dec(r.ore), dec(r.personeSessione), u == null ? "-" : soldi(u, D.valuta));
@@ -451,25 +459,23 @@ footer a { color: inherit; }
     document.getElementById("t-modelli").textContent = T.modelli;
     document.getElementById("t-progetti").textContent = T.progetti;
     document.getElementById("t-clic").textContent = T.clic_progetto;
-    var avvisi = [T.avviso_abbonamento, T.avviso_condivisione];
-    Object.keys(D.ignoti).forEach(function (m) { avvisi.push(T.avviso_ignoti.replace("%s", m).replace("%s", token(D.ignoti[m]))); });
-    if (D.illeggibili === 1) avvisi.push(T.avviso_illeggibili_1);
-    else if (D.illeggibili) avvisi.push(T.avviso_illeggibili.replace("%s", numero(D.illeggibili)));
-    document.getElementById("avvisi").innerHTML = avvisi.map(function (a) { return '<p class="avviso">' + esc(a) + "</p>"; }).join("");
+    avvisiFissi = [T.avviso_abbonamento, T.avviso_condivisione];
+    if (D.illeggibili === 1) avvisiFissi.push(T.avviso_illeggibili_1);
+    else if (D.illeggibili) avvisiFissi.push(sost(T.avviso_illeggibili, numero(D.illeggibili)));
 
     var az = P.metodo_b_minuti_per_azione;
     var elenco = Object.keys(az).map(function (k) { return (T.azioni_nomi[k] || k) + " " + az[k] + " " + T.minuti; }).join(", ");
     var cambio = "";
     if (D.valuta !== "USD" && D.cambio.tasso) {
       cambio = D.cambio.fonte === "bce"
-        ? T.cambio_bce.replace("%s", D.cambio.data).replace("%s", numero(D.cambio.tasso, 4)).replace("%s", simboli[D.valuta] || D.valuta)
-        : T.cambio_fisso.replace("%s", numero(D.cambio.tasso, 4)).replace("%s", simboli[D.valuta] || D.valuta);
+        ? sost(T.cambio_bce, D.cambio.data, numero(D.cambio.tasso, 4), simboli[D.valuta] || D.valuta)
+        : sost(T.cambio_fisso, numero(D.cambio.tasso, 4), simboli[D.valuta] || D.valuta);
     }
     var paragrafi = [
-      T.metodo_token.replace("%s", D.prezzi_verificati),
-      T.metodo_umano.replace("%s", P.metodo_a_volume.righe_codice_ora).replace("%s", P.metodo_a_volume.parole_testo_ora).replace("%s", elenco),
-      T.metodo_persone.replace("%s", P.ore_giornata).replace("%s", P.pausa_massima_minuti),
-      D.tariffa ? T.metodo_costo.replace("%s", soldi(D.tariffa, D.valuta)) + " " + cambio : cambio
+      sost(T.metodo_token, D.prezzi_verificati),
+      sost(T.metodo_umano, P.metodo_a_volume.righe_codice_ora, P.metodo_a_volume.parole_testo_ora, elenco),
+      sost(T.metodo_persone, P.ore_giornata, P.pausa_massima_minuti),
+      D.tariffa ? sost(T.metodo_costo, soldi(D.tariffa, D.valuta)) + " " + cambio : cambio
     ];
     document.getElementById("metodo").innerHTML = "<h2>" + esc(T.metodo_titolo) + "</h2>" +
       paragrafi.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("");
@@ -501,7 +507,31 @@ footer a { color: inherit; }
     });
   }
 
+  var avvisiFissi = [];
+  function avvisi() {
+    var ignoti = {};
+    D.ignoti.forEach(function (x) {
+      if (nelPeriodo(x[1]) && delProgetto(x[0])) ignoti[x[2]] = (ignoti[x[2]] || 0) + x[3];
+    });
+    var tutti = avvisiFissi.concat(Object.keys(ignoti).map(function (m) { return sost(T.avviso_ignoti, m, token(ignoti[m])); }));
+    document.getElementById("avvisi").innerHTML = tutti.map(function (a) { return '<p class="avviso">' + esc(a) + "</p>"; }).join("");
+  }
+
+  function listino() {
+    var L = D.listino, voci = ["letti", "scritti", "cache_5m", "cache_1h", "riletti"];
+    var righe = Object.keys(L.modelli).sort().map(function (m) { return [m, L.modelli[m]]; })
+      .concat(Object.keys(L.modalita_veloce).sort().map(function (m) { return [m + " (" + T.veloce + ")", L.modalita_veloce[m]]; }));
+    var th = [T.modello, T.letti, T.scritti, T.cache_5m, T.cache_1h, T.cache_riletti];
+    document.getElementById("listino").innerHTML = "<h2>" + esc(T.listino_pagina) + '</h2><p class="piccolo">' +
+      esc(sost(T.listino_sotto, D.prezzi_verificati)) + '</p><div class="scorre"><table><thead><tr>' +
+      th.map(function (x, i) { return '<th style="cursor:default"' + (i ? "" : ' class="s"') + ">" + esc(x) + "</th>"; }).join("") +
+      "</tr></thead><tbody>" + righe.map(function (r) {
+        return "<tr><td>" + esc(r[0]) + "</td>" + voci.map(function (v) { return "<td>" + esc(numero(r[1][v], 2)) + "</td>"; }).join("") + "</tr>";
+      }).join("") + "</tbody></table></div>";
+  }
+
   function disegna() {
+    avvisi();
     document.getElementById("dal").value = stato.dal || primo;
     document.getElementById("al").value = stato.al || oggi;
     document.getElementById("progetto").value = stato.progetto || "";
@@ -514,6 +544,7 @@ footer a { color: inherit; }
   }
 
   testiFissi();
+  listino();
   disegna();
   var attesa;
   window.addEventListener("resize", function () { clearTimeout(attesa); attesa = setTimeout(function () { grafico(celleScelte()); }, 150); });

@@ -8,4 +8,6 @@ fi
 rm -f "$HOME/.local/bin/consumo-claude" "$HOME/.local/share/applications/consumo-claude.desktop" \
       "$HOME/Desktop/Consumo Claude.command"
 rm -rf "$DEST"
+# Archivio (pagina HTML compresa) e impostazioni personali.
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/consumo-claude" "${XDG_CONFIG_HOME:-$HOME/.config}/consumo-claude"
 echo "Consumo Claude disinstallato.  /  Uninstalled."

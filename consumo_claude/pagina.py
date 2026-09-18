@@ -10,8 +10,11 @@ def scrivi(destinazione, rapporto, testi, progetto=None, dal=None, al=None):
     dati["campi"] = CAMPI
     dati["testi"] = testi
     dati["iniziale"] = {"progetto": progetto, "dal": dal, "al": al}
-    # "</" dentro un <script> chiuderebbe il blocco: si spezza.
-    carico = json.dumps(dati, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    # Dentro <script> il testo non deve contenere "<" (un titolo con "</script>"
+    # o "<!--<script" romperebbe la pagina): si scrive come \u003c, che per
+    # JSON e' lo stesso carattere.
+    carico = (json.dumps(dati, ensure_ascii=False, separators=(",", ":"))
+              .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026"))
     modello = (DATI / "pagina.html").read_text(encoding="utf-8")
     html = (modello.replace("__LINGUA__", rapporto["lingua"])
             .replace("__TITOLO__", testi["titolo"])

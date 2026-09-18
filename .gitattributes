@@ -1,3 +1,12 @@
 .gitattributes export-ignore
 .gitignore export-ignore
+# Fine riga fissi: Git per Windows convertirebbe i file per sh in CRLF, e la
+# shell non li saprebbe piu leggere.
 *.bat text eol=crlf
+*.sh text eol=lf
+*.command text eol=lf
+bin/consumo-claude text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.html text eol=lf

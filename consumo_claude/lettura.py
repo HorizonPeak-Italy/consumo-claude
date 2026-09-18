@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-VERSIONE_ARCHIVIO = 1
+VERSIONE_ARCHIVIO = 2
 
 STRUMENTI_SCRITTURA = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
@@ -33,12 +33,17 @@ def cartella_archivio():
 
 
 def _secondi(ts):
-    if not ts:
+    if not isinstance(ts, str) or not ts:
         return None
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
     except ValueError:
         return None
+
+
+def _n(x):
+    """Un conteggio letto dalle cronologie: numero intero, o zero se strano."""
+    return int(x) if isinstance(x, (int, float)) and not isinstance(x, bool) else 0
 
 
 def _conta(testo):
@@ -71,15 +76,88 @@ def _scritto(nome, dati):
     return estensione, righe, parole
 
 
-def _testo_utente(messaggio):
-    contenuto = messaggio.get("content") if isinstance(messaggio, dict) else None
-    if isinstance(contenuto, str):
-        return contenuto
-    if isinstance(contenuto, list):
-        for b in contenuto:
-            if isinstance(b, dict) and b.get("type") == "text":
-                return b.get("text") or ""
-    return ""
+def _leggi_riga(d, sotto_agente, risposte, blocchi, momenti, sessioni):
+    """Aggiunge agli elenchi quello che serve di una riga gia' decodificata."""
+    tipo = d.get("type")
+    sid = d.get("sessionId")
+    if not sid:
+        return
+    s = sessioni.setdefault(sid, {})
+
+    if tipo == "ai-title" and isinstance(d.get("aiTitle"), str):
+        s["titolo_ai"] = d["aiTitle"]
+        return
+    if tipo == "custom-title" and isinstance(d.get("customTitle"), str):
+        s["titolo"] = d["customTitle"]
+        return
+    if tipo not in ("user", "assistant"):
+        return
+
+    sec = _secondi(d.get("timestamp"))
+    if sec is not None:
+        momenti.append([sid, sec])
+    if not sotto_agente and isinstance(d.get("cwd"), str) and d["cwd"] and "cwd" not in s:
+        s["cwd"] = d["cwd"]
+
+    if tipo == "user":
+        return
+
+    m = d.get("message")
+    if not isinstance(m, dict):
+        return
+    modello = m.get("model") or ""
+    if modello == "<synthetic>":
+        return
+    if m.get("id") or d.get("requestId"):
+        chiave = "%s|%s" % (m.get("id"), d.get("requestId"))
+    else:
+        chiave = "riga|%s" % d.get("uuid")
+    u = m.get("usage")
+    if isinstance(u, dict):
+        cc = u.get("cache_creation")
+        cc = cc if isinstance(cc, dict) else {}
+        scritti_cache = _n(u.get("cache_creation_input_tokens"))
+        c1h = _n(cc.get("ephemeral_1h_input_tokens"))
+        if "ephemeral_5m_input_tokens" in cc:
+            c5m = _n(cc["ephemeral_5m_input_tokens"])
+        else:
+            c5m = max(scritti_cache - c1h, 0)
+        dettagli = u.get("output_tokens_details")
+        dettagli = dettagli if isinstance(dettagli, dict) else {}
+        server = u.get("server_tool_use")
+        server = server if isinstance(server, dict) else {}
+        geo = u.get("inference_geo")
+        risposte.append([
+            chiave, sid, sec, str(modello),
+            1 if u.get("speed") == "fast" else 0,
+            geo if isinstance(geo, str) else "",
+            _n(u.get("input_tokens")),
+            _n(u.get("output_tokens")),
+            c5m, c1h,
+            _n(u.get("cache_read_input_tokens")),
+            _n(dettagli.get("thinking_tokens")),
+            _n(server.get("web_search_requests")),
+        ])
+
+    contenuto = m.get("content")
+    if not isinstance(contenuto, list):
+        return
+    for b in contenuto:
+        if not isinstance(b, dict):
+            continue
+        if b.get("type") == "text":
+            testo = b.get("text") or ""
+            impronta = hashlib.sha1(testo.encode("utf-8", "replace")).hexdigest()[:12]
+            blocchi.append([chiave + "|t" + impronta, sid, sec, "", "",
+                            0, len(testo.split())])
+        elif b.get("type") == "tool_use":
+            nome = b.get("name") or ""
+            est, righe, parole = "", 0, 0
+            if nome in STRUMENTI_SCRITTURA:
+                est, righe, parole = _scritto(nome, b.get("input"))
+            blocchi.append([chiave + "|" + str(b.get("id")), sid, sec, nome,
+                            est, righe, parole])
+
 
 
 def leggi_file(percorso, sotto_agente=False):
@@ -104,87 +182,11 @@ def leggi_file(percorso, sotto_agente=False):
                 continue
             try:
                 d = json.loads(riga)
-            except ValueError:
+                if isinstance(d, dict):
+                    _leggi_riga(d, sotto_agente, risposte, blocchi, momenti, sessioni)
+            except (ValueError, TypeError, AttributeError, KeyError):
                 if riga.strip():
                     illeggibili += 1
-                continue
-            if not isinstance(d, dict):
-                continue
-            tipo = d.get("type")
-            sid = d.get("sessionId")
-            if not sid:
-                continue
-            s = sessioni.setdefault(sid, {})
-
-            if tipo == "ai-title" and d.get("aiTitle"):
-                s["titolo_ai"] = d["aiTitle"]
-                continue
-            if tipo == "custom-title" and d.get("customTitle"):
-                s["titolo"] = d["customTitle"]
-                continue
-            if tipo not in ("user", "assistant"):
-                continue
-
-            sec = _secondi(d.get("timestamp"))
-            if sec is not None:
-                momenti.append([sid, sec])
-            if not sotto_agente and d.get("cwd") and "cwd" not in s:
-                s["cwd"] = d["cwd"]
-
-            if tipo == "user":
-                if "primo" not in s and not d.get("isMeta") and not sotto_agente:
-                    testo = _testo_utente(d.get("message")).strip()
-                    if testo and not testo.startswith("<"):
-                        s["primo"] = " ".join(testo.split())[:80]
-                continue
-
-            m = d.get("message")
-            if not isinstance(m, dict):
-                continue
-            modello = m.get("model") or ""
-            if modello == "<synthetic>":
-                continue
-            chiave = "%s|%s" % (m.get("id"), d.get("requestId"))
-            u = m.get("usage")
-            if isinstance(u, dict):
-                cc = u.get("cache_creation") or {}
-                scritti_cache = u.get("cache_creation_input_tokens") or 0
-                c1h = cc.get("ephemeral_1h_input_tokens") or 0
-                c5m = cc.get("ephemeral_5m_input_tokens")
-                if c5m is None:
-                    c5m = max(scritti_cache - c1h, 0)
-                dettagli = u.get("output_tokens_details") or {}
-                server = u.get("server_tool_use") or {}
-                risposte.append([
-                    chiave, sid, sec, modello,
-                    1 if u.get("speed") == "fast" else 0,
-                    u.get("inference_geo") or "",
-                    u.get("input_tokens") or 0,
-                    u.get("output_tokens") or 0,
-                    c5m, c1h,
-                    u.get("cache_read_input_tokens") or 0,
-                    dettagli.get("thinking_tokens") or 0,
-                    server.get("web_search_requests") or 0,
-                ])
-
-            contenuto = m.get("content")
-            if not isinstance(contenuto, list):
-                continue
-            for b in contenuto:
-                if not isinstance(b, dict):
-                    continue
-                if b.get("type") == "text":
-                    testo = b.get("text") or ""
-                    impronta = hashlib.sha1(testo.encode("utf-8", "replace")).hexdigest()[:12]
-                    blocchi.append([chiave + "|t" + impronta, sid, sec, "", "",
-                                    0, len(testo.split())])
-                elif b.get("type") == "tool_use":
-                    nome = b.get("name") or ""
-                    est, righe, parole = "", 0, 0
-                    if nome in STRUMENTI_SCRITTURA:
-                        est, righe, parole = _scritto(nome, b.get("input"))
-                    blocchi.append([chiave + "|" + str(b.get("id")), sid, sec, nome,
-                                    est, righe, parole])
 
     return {
         "risposte": risposte,
@@ -199,7 +201,10 @@ def elenca_file(cartella):
     """Tutti i file di cronologia: (percorso, e' di un sotto-agente)."""
     if not cartella.is_dir():
         return []
-    return [(p, "subagents" in p.parts) for p in sorted(cartella.rglob("*.jsonl"))]
+    # "subagents" si cerca solo dentro la cartella delle cronologie, non nel
+    # percorso che porta fin li'.
+    return [(p, "subagents" in p.relative_to(cartella).parts)
+            for p in sorted(cartella.rglob("*.jsonl"))]
 
 
 def carica(cartella, usa_archivio=True):
@@ -209,10 +214,18 @@ def carica(cartella, usa_archivio=True):
     ordinato dal piu' vecchio: se la stessa risposta compare in due file (una
     sessione ripresa ne copia una parte), vale la prima.
     """
-    archivio_dir = cartella_archivio() / "file"
+    # Un archivio per ogni cartella di cronologie, cosi' la pulizia qui sotto
+    # non tocca mai quello di un'altra cartella.
+    radice = cartella_archivio() / "file"
+    archivio_dir = radice / hashlib.sha1(str(cartella.resolve()).encode()).hexdigest()[:16]
     if usa_archivio:
         archivio_dir.mkdir(parents=True, exist_ok=True)
-    letti = []
+        for vecchio in radice.glob("*.json"):   # archivio della versione 1
+            try:
+                vecchio.unlink()
+            except OSError:
+                pass
+    letti, usati = [], set()
     for percorso, sotto in elenca_file(cartella):
         try:
             info = percorso.stat()
@@ -220,6 +233,7 @@ def carica(cartella, usa_archivio=True):
             continue
         firma = [VERSIONE_ARCHIVIO, info.st_size, info.st_mtime_ns]
         nome = hashlib.sha1(str(percorso).encode()).hexdigest() + ".json"
+        usati.add(nome)
         dati = None
         if usa_archivio:
             try:
@@ -244,5 +258,13 @@ def carica(cartella, usa_archivio=True):
                     pass
         tempi = [m[1] for m in dati["momenti"]]
         letti.append((min(tempi) if tempi else float("inf"), str(percorso), dati))
+    # Via dall'archivio i file di cronologia che non esistono piu'.
+    if usa_archivio:
+        for salvato in archivio_dir.glob("*.json"):
+            if salvato.name not in usati:
+                try:
+                    salvato.unlink()
+                except OSError:
+                    pass
     letti.sort(key=lambda x: (x[0], x[1]))
     return [(p, d) for _, p, d in letti]

@@ -7,7 +7,10 @@ echo   =======================================================
 echo.
 
 set "ORIGINE=%~dp0"
-set "DEST=%LOCALAPPDATA%\consumo-claude"
+rem Il programma sta in Programs\consumo-claude, separato dall'archivio che
+rem crea in %LOCALAPPDATA%\consumo-claude: altrimenti l'archivio finirebbe
+rem copiato fra i plugin di Claude Code a ogni aggiornamento.
+set "DEST=%LOCALAPPDATA%\Programs\consumo-claude"
 
 rem Aperto da dentro lo ZIP senza estrarlo: manca il resto del programma.
 if not exist "%ORIGINE%consumo_claude\__main__.py" (
@@ -56,6 +59,8 @@ rem ---- 3. Avvio con doppio clic e icona sul desktop ----
   echo where claude ^>nul 2^>^&1 ^&^& call claude plugin uninstall consumo-claude@horizonpeak ^>nul 2^>^&1
   echo where claude ^>nul 2^>^&1 ^&^& call claude plugin marketplace remove horizonpeak ^>nul 2^>^&1
   echo powershell -NoProfile -Command "Remove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Consumo Claude.lnk') -ErrorAction SilentlyContinue"
+  echo rmdir /s /q "%LOCALAPPDATA%\consumo-claude" 2^>nul
+  echo rmdir /s /q "%APPDATA%\consumo-claude" 2^>nul
   echo echo Fatto. / Done.
   echo pause
   echo cd /d "%%TEMP%%"
@@ -109,5 +114,6 @@ py -3 -c "import sys; sys.exit(sys.version_info < (3, 8))" >nul 2>&1 && set "PY=
 python -c "import sys; sys.exit(sys.version_info < (3, 8))" >nul 2>&1 && set "PY=python" && exit /b 0
 rem Appena installato da winget il PATH di questa finestra non e' ancora aggiornato.
 for %%P in ("%LOCALAPPDATA%\Programs\Python\Launcher\py.exe") do if exist %%P set "PY="%%~P" -3" && exit /b 0
-for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do if exist "%%D\python.exe" set "PY="%%D\python.exe""
+rem Si prova ogni versione trovata e si tiene solo una 3.8 o successiva.
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do if exist "%%D\python.exe" "%%D\python.exe" -c "import sys; sys.exit(sys.version_info < (3, 8))" >nul 2>&1 && set "PY="%%D\python.exe""
 exit /b 0

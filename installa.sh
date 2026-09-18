@@ -4,7 +4,7 @@
 # consumo-claude, un'icona per avviarlo e, se c'e' Claude Code, il comando /consumo.
 
 set -e
-ORIGINE=$(cd "$(dirname "$0")" && pwd)
+ORIGINE=$(cd "$(dirname "$0")" && pwd -P)
 DEST="$HOME/.local/share/consumo-claude"
 BIN="$HOME/.local/bin"
 SISTEMA=$(uname -s)
@@ -44,13 +44,20 @@ fi
 echo "  Python: $(command -v "$PY")"
 
 # ---- 2. Copia in una cartella stabile ----
-if [ "$ORIGINE" != "$DEST" ]; then
+# Si confrontano i percorsi reali (pwd -P): rilanciato dalla cartella gia'
+# installata, magari passando da un collegamento, non deve cancellare se stesso.
+# La copia nuova si prepara a parte e sostituisce la vecchia solo se riuscita.
+mkdir -p "$DEST"
+DEST_REALE=$(cd "$DEST" && pwd -P)
+if [ "$ORIGINE" != "$DEST_REALE" ]; then
   echo "  Copio il programma in $DEST"
+  NUOVA="$DEST.nuova.$$"
+  rm -rf "$NUOVA"
+  cp -R "$ORIGINE/." "$NUOVA/"
   rm -rf "$DEST"
-  mkdir -p "$DEST"
-  cp -R "$ORIGINE/." "$DEST/"
+  mv "$NUOVA" "$DEST"
 fi
-chmod +x "$DEST/bin/consumo-claude" "$DEST/skills/consumo/consumo.sh" "$DEST/disinstalla.sh" 2>/dev/null || true
+chmod +x "$DEST/bin/consumo-claude" "$DEST/skills/consumo/consumo.sh" "$DEST/disinstalla.sh" "$DEST/avvia.sh" 2>/dev/null || true
 
 # ---- 3. Comando da terminale e icona ----
 mkdir -p "$BIN"
@@ -62,19 +69,27 @@ case ":$PATH:" in
 esac
 
 if [ "$SISTEMA" = "Darwin" ]; then
+  # Scrivere sulla Scrivania puo' far chiedere un permesso a macOS: se viene
+  # negato, l'installazione prosegue senza icona invece di fermarsi.
   ICONA="$HOME/Desktop/Consumo Claude.command"
-  printf '#!/bin/sh\n"%s/bin/consumo-claude"\necho\nprintf "Premi Invio per chiudere..."\nread x\n' "$DEST" > "$ICONA"
-  chmod +x "$ICONA"
-  echo "  Icona \"Consumo Claude\" creata sulla Scrivania."
+  if { printf '#!/bin/sh\nexec sh "%s/avvia.sh"\n' "$DEST" > "$ICONA"; } 2>/dev/null && chmod +x "$ICONA"; then
+    echo "  Icona \"Consumo Claude\" creata sulla Scrivania."
+  else
+    echo "  Icona sulla Scrivania non creata (permesso negato). Si avvia con:"
+    echo "    sh \"$DEST/avvia.sh\""
+  fi
 else
   MENU="$HOME/.local/share/applications"
   mkdir -p "$MENU"
+  # Nella riga Exec il percorso sta tra virgolette doppie, con \ " ` $ protetti
+  # come chiede lo standard dei file .desktop.
+  PERCORSO=$(printf '%s' "$DEST/avvia.sh" | sed 's/[\\"`$]/\\&/g')
   cat > "$MENU/consumo-claude.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Consumo Claude
 Comment=Token, costo e lavoro umano equivalente di Claude Code
-Exec=sh -c '"$DEST/bin/consumo-claude"; echo; printf "Invio per chiudere..."; read x'
+Exec=sh "$PERCORSO"
 Terminal=true
 Icon=utilities-system-monitor
 Categories=Utility;

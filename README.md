@@ -45,15 +45,16 @@ Estrai lo ZIP, poi:
 | Sistema | Cosa fare |
 |---|---|
 | **Windows** | Doppio clic su `installa-windows.bat` |
-| **Mac** | Doppio clic su `installa-mac.command` (la prima volta: tasto destro, *Apri*) |
+| **Mac** | Doppio clic su `installa-mac.command`. Il Mac lo blocca perché viene da internet: apri *Impostazioni di Sistema → Privacy e sicurezza*, in fondo premi *Apri comunque*, poi di nuovo doppio clic |
 | **Linux** | Nel terminale, dalla cartella estratta: `sh installa.sh` |
 
 L'installatore controlla Python (su Windows, se manca, lo installa con il tuo
 permesso), copia il programma in una cartella stabile, crea un'icona
 "Consumo Claude" (desktop su Windows e Mac, menu delle applicazioni su Linux)
 e, se hai Claude Code, aggiunge il comando `/consumo`. L'icona non consuma
-token. Per togliere tutto: `Disinstalla.bat` (Windows) o `sh disinstalla.sh`
-(Linux e Mac), nella cartella in cui il programma è stato copiato.
+token. Per togliere tutto (programma, icona, comando `/consumo`, archivio e
+impostazioni): `Disinstalla.bat` in `%LOCALAPPDATA%\Programs\consumo-claude`
+su Windows, `sh ~/.local/share/consumo-claude/disinstalla.sh` su Linux e Mac.
 
 ### A mano
 
@@ -148,16 +149,30 @@ consuma qualche migliaio di token ogni volta. Da terminale non costa nulla.
 Tutti i numeri si cambiano: `consumo-claude --impostazioni` crea le copie
 personali di `impostazioni.json` e `prezzi.json` e dice dove sono.
 
+## Prezzi
+
+Il listino (dollari per milione di token, per ogni modello e tipo di token) si
+vede in fondo alla pagina o con `consumo-claude --listino`. **Si aggiorna da
+solo:** Anthropic non pubblica i prezzi in un formato leggibile dai programmi,
+quindi il listino sta in questo repository
+([`prezzi.json`](consumo_claude/dati/prezzi.json)) e il programma ne scarica la
+versione più recente al massimo una volta al giorno. Quando i prezzi cambiano
+si aggiorna qui, e arrivano a tutti senza reinstallare.
+
 ## Privacy
 
-Il programma legge le cronologie e non le modifica mai. L'unica connessione a
-internet è la richiesta del cambio dollaro/euro a
-[frankfurter.dev](https://frankfurter.dev) (tassi BCE), al massimo ogni 12 ore:
-contiene solo le due valute, nessun dato tuo. Si spegne con `--offline`.
+Il programma legge le cronologie e non le modifica mai. Si collega a internet
+solo per due cose, e nessuna delle due contiene dati tuoi:
 
-La pagina HTML contiene nomi dei progetti e titoli delle sessioni, nessun
-contenuto delle chat. I titoli però possono dire molto: attenzione se la
-condividi.
+- il cambio dollaro/euro della BCE da [frankfurter.dev](https://frankfurter.dev),
+  al massimo ogni 12 ore;
+- il listino prezzi da questo repository GitHub, al massimo una volta al giorno.
+
+Si spengono entrambe con `--offline`.
+
+La pagina HTML contiene nomi dei progetti e titoli delle sessioni (quelli che
+Claude Code mostra nell'elenco), mai il testo dei messaggi. I titoli però
+possono dire molto: attenzione se la condividi.
 
 ## Licenza
 
@@ -216,6 +231,7 @@ Claude Code: `consumo-claude --help`. The language follows your system
 
 `/consumo` inside Claude puts the summary in the conversation and costs a few
 thousand tokens each time; the standalone command costs nothing.
+`consumo-claude --prices` shows the price list in use.
 
 ## How it is calculated
 
@@ -231,10 +247,11 @@ parameter can be changed: `consumo-claude --settings`.
 
 ## Privacy
 
-Read-only. The only network call fetches the ECB exchange rate from
-frankfurter.dev (currency codes only, at most every 12 hours; `--offline`
-disables it). The HTML page contains project names and session titles, no
-chat content.
+Read-only. Two network calls, neither carrying your data: the ECB exchange
+rate from frankfurter.dev (at most every 12 hours) and the price list from
+this repository (at most once a day, so price changes reach everyone without
+reinstalling). `--offline` disables both. The HTML page contains project names
+and session titles, never message text.
 
 ## License
 

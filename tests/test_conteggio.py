@@ -18,7 +18,7 @@ os.environ["TZ"] = "UTC"
 if hasattr(time, "tzset"):
     time.tzset()
 
-from consumo_claude import calcolo, lettura  # noqa: E402
+from consumo_claude import calcolo, lettura, listino  # noqa: E402
 from consumo_claude.__main__ import main, periodo  # noqa: E402
 
 
@@ -142,7 +142,7 @@ class Conti(Base):
 
     def test_modello_sconosciuto_segnalato(self):
         r, _ = self.rapporto()
-        self.assertEqual(r["ignoti"], {"claude-futuro-9": 200})
+        self.assertEqual(r["ignoti"], [[S1, "2026-09-10", "claude-futuro-9", 200]])
 
     def test_riga_rotta_contata(self):
         r, _ = self.rapporto()
@@ -151,7 +151,10 @@ class Conti(Base):
     def test_titoli_e_progetto(self):
         r, _ = self.rapporto()
         self.assertEqual(r["sessioni"][S1]["titolo"], "Prova alfa")
-        self.assertEqual(r["sessioni"][S2]["titolo"], "riprendo")
+        # Senza titolo resta vuoto: il testo dei messaggi non entra mai nel rapporto.
+        self.assertEqual(r["sessioni"][S2]["titolo"], "")
+        self.assertNotIn("riprendo", json.dumps(r))
+        self.assertNotIn("ciao", json.dumps(r))
         self.assertEqual(list(r["progetti"].values()), [{"nome": "alfa", "percorso": "/progetti/alfa"}])
 
     def test_lavoro_umano(self):
@@ -163,6 +166,42 @@ class Conti(Base):
         # da 10:00:00 a 10:04:30 (anche il messaggio d'errore e' tempo di sessione)
         self.assertAlmostEqual(s["v"][calcolo.MINUTI], 4.5, places=6)
         self.assertAlmostEqual(calcolo.persone_sessione(s), s["ore"] / (4.5 / 60), places=6)
+
+    def test_mezzanotte_non_crea_giorni_vuoti(self):
+        scrivi(self.radice / "-progetti-alfa" / "notte.jsonl", [
+            utente("notte", "2026-09-10T23:40:00Z", "domanda"),
+            risposta("notte", "2026-09-10T23:51:00Z", "n1", "claude-opus-5", uso(letti=10), []),
+            utente("notte", "2026-09-11T00:10:00Z", "altra domanda senza risposta"),
+        ])
+        r, _ = self.rapporto()
+        giorni = [c[1] for c in r["celle"] if c[0] == "notte"]
+        self.assertEqual(giorni, ["2026-09-10"])
+        self.assertAlmostEqual(self.per_sessione(r, "notte")["v"][calcolo.MINUTI], 30.0, places=6)
+
+    def test_campi_di_tipo_strano(self):
+        scrivi(self.radice / "-progetti-alfa" / "strana.jsonl", [
+            {"type": "assistant", "sessionId": "strana", "timestamp": 123, "cwd": ["x"],
+             "message": {"id": "s1", "model": "claude-opus-5", "content": "testo",
+                         "usage": {"input_tokens": "tanti", "cache_creation": []}}},
+            risposta("strana", "2026-09-12T10:00:00Z", "s2", "claude-opus-5", uso(letti=7), [5, None]),
+        ])
+        r, _ = self.rapporto()
+        self.assertEqual(self.per_sessione(r, "strana")["v"][calcolo.LETTI], 7)
+
+    def test_cartella_sotto_una_directory_subagents(self):
+        nuova = self.tmp / "subagents" / "projects"
+        shutil.copytree(self.radice, nuova)
+        file_letti = lettura.carica(nuova, usa_archivio=False)
+        imp = calcolo.carica_json("impostazioni.json")
+        r = calcolo.calcola(file_letti, nuova, calcolo.Prezzi(calcolo.carica_json("prezzi.json")), imp)
+        self.assertEqual(r["sessioni"][S1]["progetto"], "/progetti/alfa")
+
+    def test_archivio_si_ripulisce(self):
+        self.rapporto(archivio=True)
+        (self.radice / "-progetti-alfa" / (S2 + ".jsonl")).unlink()
+        self.rapporto(archivio=True)
+        archiviati = list((lettura.cartella_archivio() / "file").rglob("*.json"))
+        self.assertEqual(len(archiviati), 2)
 
     def test_archivio_da_lo_stesso_risultato(self):
         senza, _ = self.rapporto(archivio=False)
@@ -197,8 +236,29 @@ class Programma(Base):
     def test_sessione_per_id(self):
         codice, testo = self.lancia("sessione", "--sessione-id", S2, "--lingua", "it")
         self.assertEqual(codice, 0)
-        self.assertIn("riprendo", testo)
+        self.assertIn("(senza titolo)", testo)
+        self.assertIn("2026-09-11 09:00", testo)      # non la data della riga ricopiata
         self.assertIn("claude-haiku-4-5", testo)
+
+    def test_sessione_inesistente(self):
+        codice, _ = self.lancia("sessione", "--sessione-id", "refuso", "--lingua", "it")
+        self.assertEqual(codice, 1)
+
+    def test_json_rispetta_il_periodo(self):
+        codice, testo = self.lancia("2026-09-11", "--json")
+        dati = json.loads(testo)
+        self.assertEqual({c[1] for c in dati["celle"]}, {"2026-09-11"})
+        self.assertEqual(dati["campi_celle"][:3], ["sessione", "giorno", "letti"])
+        self.assertEqual(list(dati["sessioni"]), [S2])
+
+    def test_pagina_resiste_ai_titoli_strani(self):
+        scrivi(self.radice / "-progetti-alfa" / (S1 + ".jsonl"), FILE_PRINCIPALE + [
+            {"type": "custom-title", "customTitle": "guarda <!--<script> e </script> $& qui", "sessionId": S1}])
+        self.lancia("--lingua", "it")
+        html = (self.tmp / "p.html").read_text(encoding="utf-8")
+        blocco = html.split('<script type="application/json" id="dati">')[1].split("</script>")[0]
+        self.assertNotIn("<", blocco)
+        self.assertEqual(json.loads(blocco)["sessioni"][S1]["titolo"], "guarda <!--<script> e </script> $& qui")
 
     def test_progetto_da_sottocartella(self):
         os.environ["CLAUDE_PROJECT_DIR"] = "/progetti/alfa/src"
@@ -227,6 +287,30 @@ class Programma(Base):
         self.assertIn("Nessuna sessione", testo)
 
 
+class Listino(Base):
+    def test_senza_internet_usa_quello_del_programma(self):
+        prezzi, fonte = listino.carica(in_linea=False)
+        self.assertEqual(fonte, "programma")
+        self.assertEqual(prezzi["modelli"]["claude-opus-5"]["letti"], 5)
+
+    def test_scartato_se_rovinato(self):
+        buono, _ = listino.carica(in_linea=False)
+        self.assertTrue(listino._valido(buono))
+        self.assertFalse(listino._valido({"verificati_il": "2099-01-01", "modelli": {"x": {"letti": "gratis"}}}))
+        self.assertFalse(listino._valido({"modelli": {}}))
+
+    def test_usa_quello_scaricato_se_piu_recente(self):
+        nuovo, _ = listino.carica(in_linea=False)
+        nuovo = json.loads(json.dumps(nuovo))
+        nuovo["verificati_il"] = "2099-01-01"
+        nuovo["modelli"]["claude-opus-5"]["letti"] = 4
+        archivio = lettura.cartella_archivio() / "prezzi-aggiornati.json"
+        archivio.parent.mkdir(parents=True, exist_ok=True)
+        archivio.write_text(json.dumps({"preso": time.time(), "listino": nuovo}))
+        prezzi, fonte = listino.carica(in_linea=False)
+        self.assertEqual((fonte, prezzi["modelli"]["claude-opus-5"]["letti"]), ("aggiornato", 4))
+
+
 class Piccoli(unittest.TestCase):
     def test_nomi_modello(self):
         n = calcolo.nome_modello
@@ -253,8 +337,9 @@ class Piccoli(unittest.TestCase):
         self.assertEqual(periodo("mese-scorso", date(2026, 1, 10)), ("2025-12-01", "2025-12-31"))
         self.assertEqual(periodo("anno", oggi), ("2026-01-01", "2026-09-18"))
         self.assertEqual(periodo("yesterday", oggi), ("2026-09-17", "2026-09-17"))
-        with self.assertRaises(ValueError):
-            periodo("domani", oggi)
+        for sbagliato in ("domani", "0g", "2026-02-30", "2026-13", "2026-09-15..2026-09-01"):
+            with self.assertRaises(ValueError):
+                periodo(sbagliato, oggi)
 
 
 if __name__ == "__main__":

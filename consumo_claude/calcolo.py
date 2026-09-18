@@ -153,13 +153,16 @@ def calcola(file_letti, radice, prezzi, imp):
 
     celle = {}        # (sessione, giorno) -> vettore numerico
     modelli = {}      # (sessione, giorno, modello) -> [token, costo]
-    ignoti = {}       # modello -> token senza prezzo
+    ignoti = {}       # (sessione, giorno, modello) -> token senza prezzo
     momenti = {}      # sessione -> set di secondi
     info = {}         # sessione -> dati descrittivi
+    estremi = {}      # sessione -> [prima, ultima] risposta o azione contata
     viste_risposte, visti_blocchi = set(), set()
     illeggibili = 0
 
     def cella(sid, sec):
+        e = estremi.setdefault(sid, [sec, sec])
+        e[0], e[1] = min(e[0], sec), max(e[1], sec)
         k = (sid, _giorno(sec))
         if k not in celle:
             celle[k] = [0] * len(CAMPI)
@@ -183,10 +186,10 @@ def calcola(file_letti, radice, prezzi, imp):
         illeggibili += dati["illeggibili"]
         for sid, s in dati["sessioni"].items():
             i = info.setdefault(sid, {})
-            for campo in ("titolo", "titolo_ai", "primo", "cwd"):
+            for campo in ("titolo", "titolo_ai", "cwd"):
                 if s.get(campo) and campo not in i:
                     i[campo] = s[campo]
-            if "cartella" not in i and "subagents" not in Path(percorso).parts:
+            if "cartella" not in i and "subagents" not in Path(percorso).relative_to(radice).parts:
                 i["cartella"] = _progetto_da_cartella(percorso, radice)
         for sid, sec in dati["momenti"]:
             momenti.setdefault(sid, set()).add(sec)
@@ -206,7 +209,8 @@ def calcola(file_letti, radice, prezzi, imp):
             token = r[6] + r[7] + r[8] + r[9] + r[10]
             modello = nome_modello(r[3])
             if dollari is None:
-                ignoti[modello] = ignoti.get(modello, 0) + token
+                ki = (r[1], _giorno(r[2]), modello)
+                ignoti[ki] = ignoti.get(ki, 0) + token
                 dollari = 0.0
             c[COSTO] += dollari
             km = (r[1], _giorno(r[2]), modello)
@@ -225,11 +229,21 @@ def calcola(file_letti, radice, prezzi, imp):
                 c[AZIONI] += 1
 
     # Durata attiva: intervalli fra messaggi consecutivi, senza le pause lunghe.
+    # Un intervallo va al giorno in cui finisce, o a quello in cui comincia se
+    # nel giorno dopo non c'e' stata attivita': un messaggio dopo mezzanotte
+    # non deve creare un giorno di lavoro fatto di soli minuti.
     for sid, tempi in momenti.items():
         ordinati = sorted(tempi)
         for prima, dopo in zip(ordinati, ordinati[1:]):
-            if dopo - prima <= pausa:
-                cella(sid, dopo)[MINUTI] += (dopo - prima) / 60
+            if dopo - prima > pausa:
+                continue
+            k = (sid, _giorno(dopo))
+            if k not in celle:
+                k = (sid, _giorno(prima))
+            if k in celle:
+                celle[k][MINUTI] += (dopo - prima) / 60
+                e = estremi[sid]
+                e[0], e[1] = min(e[0], prima), max(e[1], dopo)
 
     # Solo le sessioni con almeno una risposta del modello.
     attive = {sid for (sid, _), v in celle.items() if v[RISPOSTE] or v[AZIONI]}
@@ -239,12 +253,14 @@ def calcola(file_letti, radice, prezzi, imp):
         percorso = i.get("cwd") or i.get("cartella") or "?"
         if percorso not in progetti:
             progetti[percorso] = {"nome": _nome_progetto(percorso), "percorso": percorso}
-        tempi = momenti.get(sid) or {0}
+        # Inizio e fine dalle risposte contate, non da tutte le righe: una
+        # sessione ripresa ricopia righe vecchie con la loro data.
+        inizio, fine = estremi[sid]
         sessioni[sid] = {
             "progetto": percorso,
-            "titolo": i.get("titolo") or i.get("titolo_ai") or i.get("primo") or sid[:8],
-            "inizio": min(tempi),
-            "fine": max(tempi),
+            "titolo": i.get("titolo") or i.get("titolo_ai") or "",
+            "inizio": inizio,
+            "fine": fine,
         }
     # Nomi uguali per progetti diversi: si aggiunge la cartella superiore.
     per_nome = {}
@@ -262,7 +278,7 @@ def calcola(file_letti, radice, prezzi, imp):
                   for (sid, g), v in sorted(celle.items()) if sid in attive],
         "modelli": [[sid, g, m, t, round(d, 6)]
                     for (sid, g, m), (t, d) in sorted(modelli.items()) if sid in attive],
-        "ignoti": ignoti,
+        "ignoti": [[sid, g, m, t] for (sid, g, m), t in sorted(ignoti.items()) if sid in attive],
         "illeggibili": illeggibili,
     }
 

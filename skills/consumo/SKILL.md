@@ -4,13 +4,13 @@ description: Token, costo in dollari e lavoro umano equivalente delle sessioni d
 argument-hint: "[progetto|sessione] [oggi|ieri|settimana|mese|mese scorso|anno|30g|2026-09]"
 disable-model-invocation: true
 effort: low
-allowed-tools: Bash(${CLAUDE_SKILL_DIR}/consumo.sh *)
+allowed-tools: Bash("${CLAUDE_SKILL_DIR}/consumo.sh" *)
 ---
 
 Riepilogo già calcolato dal programma consumo-claude:
 
 ```!
-${CLAUDE_SKILL_DIR}/consumo.sh --sessione-id ${CLAUDE_SESSION_ID} $ARGUMENTS
+"${CLAUDE_SKILL_DIR}/consumo.sh" --sessione-id "${CLAUDE_SESSION_ID}" "$ARGUMENTS"
 ```
 
 Mostra all'utente il riepilogo qui sopra così com'è, dentro un blocco di codice,

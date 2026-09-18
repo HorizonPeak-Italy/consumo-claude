@@ -14,7 +14,7 @@ import webbrowser
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from . import calcolo, cambio, lettura, pagina
+from . import calcolo, cambio, lettura, listino, pagina
 from .testi import TESTI, Formato, lingua_sistema
 
 PAROLE_PROGETTO = {"progetto", "project"}
@@ -25,8 +25,18 @@ def periodo(parola, oggi=None):
     """(dal, al) in forma AAAA-MM-GG, None = senza limite.
 
     La settimana va da lunedi' a oggi; "7g" sono gli ultimi 7 giorni.
+    Date impossibili, "0g" e intervalli rovesciati danno ValueError.
     """
-    oggi = oggi or date.today()
+    dal, al = _periodo(parola, oggi or date.today())
+    for d in (dal, al):
+        if d is not None:
+            date.fromisoformat(d)      # 2026-02-30 -> ValueError
+    if dal and al and dal > al:
+        raise ValueError(parola)
+    return dal, al
+
+
+def _periodo(parola, oggi):
     p = parola.lower()
     if p in ("tutto", "all"):
         return None, None
@@ -48,7 +58,7 @@ def periodo(parola, oggi=None):
     if p in ("anno", "year"):
         return oggi.replace(month=1, day=1).isoformat(), oggi.isoformat()
     m = re.fullmatch(r"(\d+)[gd]", p)
-    if m:
+    if m and int(m.group(1)) > 0:
         return (oggi - timedelta(days=int(m.group(1)) - 1)).isoformat(), oggi.isoformat()
     m = re.fullmatch(r"(\d{4})-(\d{2})", p)
     if m:
@@ -78,7 +88,8 @@ def argomenti(argv):
     a.add_argument("--senza-pagina", "--no-page", action="store_true", help="non generare la pagina HTML")
     a.add_argument("--pagina", "--page", help="dove salvare la pagina HTML")
     a.add_argument("--json", action="store_true", help="stampa i dati calcolati in JSON, per altri programmi")
-    a.add_argument("--offline", action="store_true", help="non aggiornare il cambio da internet")
+    a.add_argument("--offline", action="store_true", help="non aggiornare cambio e listino prezzi da internet")
+    a.add_argument("--listino", "--prices", action="store_true", help="mostra il listino prezzi usato")
     a.add_argument("--senza-archivio", "--no-cache", action="store_true", help="rileggi tutte le cronologie")
     a.add_argument("--impostazioni", "--settings", action="store_true",
                    help="crea (se manca) e mostra il file delle impostazioni personali")
@@ -144,7 +155,10 @@ def main(argv=None):
                 return 2
 
     imp = calcolo.carica_json("impostazioni.json")
-    listino = calcolo.carica_json("prezzi.json")
+    prezzi, fonte_listino = listino.carica(not arg.offline)
+    if arg.listino:
+        stampa_listino(prezzi, fonte_listino, t, fmt)
+        return 0
     valuta = imp.get("valuta", "auto")
     if valuta == "auto":
         valuta = "EUR" if lingua == "it" else "USD"
@@ -156,7 +170,7 @@ def main(argv=None):
     if not file_letti:
         print(t["nessuna_cronologia"] % radice, file=sys.stderr)
         return 1
-    rapporto = calcolo.calcola(file_letti, radice, calcolo.Prezzi(listino), imp)
+    rapporto = calcolo.calcola(file_letti, radice, calcolo.Prezzi(prezzi), imp)
 
     rapporto.update({
         "lingua": lingua,
@@ -164,7 +178,9 @@ def main(argv=None):
         "tariffa": tariffa,
         "cambio": {"tasso": tasso, "fonte": fonte_cambio, "data": data_cambio},
         "parametri": imp,
-        "prezzi_verificati": listino.get("verificati_il"),
+        "prezzi_verificati": prezzi.get("verificati_il"),
+        "listino": {"fonte": fonte_listino, "modelli": prezzi["modelli"],
+                    "modalita_veloce": prezzi.get("modalita_veloce", {})},
         "generato": datetime.now().isoformat(timespec="minutes"),
     })
 
@@ -188,19 +204,32 @@ def main(argv=None):
         filtro_progetto = max(candidati, key=len)
         celle = [c for c in celle if sessioni[c[0]]["progetto"] == filtro_progetto]
     elif vista == "sessione":
+        # Una sessione indicata ma inesistente e' un errore: mostrarne un'altra
+        # al suo posto sarebbe fuorviante. Senza indicazioni, l'ultima del progetto.
         sid = arg.sessione_id or os.environ.get("CLAUDE_SESSION_ID")
-        if not sid or sid not in sessioni:
+        if not sid:
             qui = os.path.realpath(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
             del_progetto = [s for s, v in sessioni.items() if os.path.realpath(v["progetto"]) == qui]
             sid = max(del_progetto, key=lambda s: sessioni[s]["fine"]) if del_progetto else None
-        if not sid:
+        if not sid or sid not in sessioni:
             print(t["sessione_non_trovata"], file=sys.stderr)
             return 1
         filtro_sessione = sid
         celle = [c for c in celle if c[0] == sid]
 
     if arg.json:
-        json.dump(rapporto, sys.stdout, ensure_ascii=False)
+        # Solo quello che ricade nel periodo e nella vista scelti, con l'ordine
+        # dei valori nelle celle.
+        scelte = {(c[0], c[1]) for c in celle}
+        uscita = dict(rapporto, campi_celle=["sessione", "giorno"] + calcolo.CAMPI,
+                      celle=celle, dal=dal, al=al)
+        uscita["modelli"] = [m for m in rapporto["modelli"] if (m[0], m[1]) in scelte]
+        uscita["ignoti"] = [m for m in rapporto["ignoti"] if (m[0], m[1]) in scelte]
+        in_uso = {c[0] for c in celle}
+        uscita["sessioni"] = {k: v for k, v in sessioni.items() if k in in_uso}
+        uscita["progetti"] = {k: v for k, v in rapporto["progetti"].items()
+                              if any(s["progetto"] == k for s in uscita["sessioni"].values())}
+        json.dump(uscita, sys.stdout, ensure_ascii=False)
         return 0
 
     stampa(rapporto, celle, vista, filtro_progetto, filtro_sessione, t, fmt, dal, al)
@@ -217,6 +246,18 @@ def main(argv=None):
                 pass
     print(t["firma"] + " · horizonpeak.it")
     return 0
+
+
+def stampa_listino(prezzi, fonte, t, fmt):
+    print(t["listino_titolo"] % prezzi.get("verificati_il", "?") + " (" + t["fonte_" + fonte] + ")\n")
+    righe = []
+    for nome, tar in sorted(prezzi["modelli"].items()):
+        righe.append([nome] + [fmt.numero(tar[v], 2) for v in listino.VOCI])
+    for nome, tar in sorted(prezzi.get("modalita_veloce", {}).items()):
+        righe.append([nome + " (" + t["veloce"] + ")"] + [fmt.numero(tar[v], 2) for v in listino.VOCI])
+    print(tabella(righe, [t["modello"], t["letti"], t["scritti"], t["cache_5m"], t["cache_1h"],
+                          t["cache_riletti"]], "lrrrrr"))
+    print("\n" + t["listino_nota"])
 
 
 def stampa(rapporto, celle, vista, filtro_progetto, filtro_sessione, t, fmt, dal, al):
@@ -264,7 +305,7 @@ def stampa(rapporto, celle, vista, filtro_progetto, filtro_sessione, t, fmt, dal
         for sid, cc in sorted(gruppi.items(), key=lambda x: -sessioni[x[0]]["inizio"]):
             r = calcolo.riepiloga(cc, ore_giornata)
             righe.append([datetime.fromtimestamp(sessioni[sid]["inizio"]).strftime("%Y-%m-%d"),
-                          taglia(sessioni[sid]["titolo"], 38), fmt.durata(r["v"][calcolo.MINUTI]),
+                          taglia(sessioni[sid]["titolo"] or t["senza_titolo"], 38), fmt.durata(r["v"][calcolo.MINUTI]),
                           fmt.token(r["token"]), fmt.soldi(r["v"][calcolo.COSTO], "USD"),
                           fmt.decimale(r["ore"]), fmt.decimale(calcolo.persone_sessione(r)), umano(r)])
         r = calcolo.riepiloga(celle, ore_giornata)
@@ -279,7 +320,7 @@ def stampa(rapporto, celle, vista, filtro_progetto, filtro_sessione, t, fmt, dal
         s = sessioni[filtro_sessione]
         r = calcolo.riepiloga(celle, ore_giornata)
         v = r["v"]
-        print(t["titolo"] + " · " + t["sessione"] + ": " + s["titolo"])
+        print(t["titolo"] + " · " + t["sessione"] + ": " + (s["titolo"] or t["senza_titolo"]))
         print(progetti[s["progetto"]]["nome"] + " · " +
               datetime.fromtimestamp(s["inizio"]).strftime("%Y-%m-%d %H:%M") + "\n")
         voci = [
@@ -311,13 +352,19 @@ def stampa(rapporto, celle, vista, filtro_progetto, filtro_sessione, t, fmt, dal
                           [t["modello"], t["token"], t["claude"]], "lrr"))
 
     print()
-    for m, tok in sorted(rapporto["ignoti"].items()):
+    scelte = {(c[0], c[1]) for c in celle}
+    ignoti = {}
+    for sid, g, m, tok in rapporto["ignoti"]:
+        if (sid, g) in scelte:
+            ignoti[m] = ignoti.get(m, 0) + tok
+    for m, tok in sorted(ignoti.items()):
         print("! " + t["avviso_ignoti"] % (m, fmt.token(tok)))
     if rapporto["illeggibili"] == 1:
         print("! " + t["avviso_illeggibili_1"])
     elif rapporto["illeggibili"]:
         print("! " + t["avviso_illeggibili"] % fmt.numero(rapporto["illeggibili"]))
     print(t["avviso_abbonamento"])
+    print(t["listino_riga"] % rapporto["prezzi_verificati"])
 
 
 if __name__ == "__main__":
