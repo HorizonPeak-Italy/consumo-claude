@@ -11,18 +11,18 @@
 <style>
 :root {
   color-scheme: light;
-  --sfondo: #f6f6f4;
-  --superficie: #fcfcfb;
-  --bordo: #e4e3df;
-  --griglia: #ecebe7;
-  --testo: #0b0b0b;
-  --testo-2: #52514e;
-  --testo-3: #76756f;
+  --sfondo: #dedcd6;
+  --superficie: #ebe9e4;
+  --bordo: #c9c6bf;
+  --griglia: #d6d3cc;
+  --testo: #26251f;
+  --testo-2: #4a4944;
+  --testo-3: #66655e;
   --serie: #2a78d6;
   --serie-tenue: rgba(42, 120, 214, .10);
-  --serie-scelta: rgba(42, 120, 214, .22);
+  --serie-scelta: rgba(42, 120, 214, .26);
   --avviso: #8a5a00;
-  --avviso-sfondo: #fff6e0;
+  --avviso-sfondo: #efe3c4;
   --logo-filtro: none;
 }
 @media (prefers-color-scheme: dark) {
@@ -118,7 +118,7 @@ tbody tr.clic:hover { background: var(--serie-tenue); }
 tbody tr.scelto { background: var(--serie-scelta); box-shadow: inset 4px 0 0 var(--serie); }
 tbody tr.scelto td { font-weight: 650; }
 tbody tr.scelto:hover { background: var(--serie-scelta); }
-select.attivo { border-color: var(--serie); box-shadow: 0 0 0 1px var(--serie); font-weight: 600; }
+select.attivo, select.attivo:focus { border-color: var(--serie); box-shadow: 0 0 0 1px var(--serie); outline: none; font-weight: 600; }
 tfoot td { font-weight: 650; border-top: 1px solid var(--bordo); }
 .vuoto { color: var(--testo-2); padding: 16px 0; }
 .piccolo { color: var(--testo-3); font-size: 12.5px; }
@@ -569,14 +569,20 @@ footer a { color: inherit; }
     var sel = document.getElementById("periodo");
     sel.innerHTML = PERIODI.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + "</option>"; }).join("");
     sel.value = stato.dal || stato.al ? "su" : "tutto";
-    sel.addEventListener("change", function () {
+    var ultimoPeriodo = sel.value;
+    function sceltoPeriodo() {
+      if (sel.value === ultimoPeriodo) return;
+      ultimoPeriodo = sel.value;
       var p = PERIODI.filter(function (x) { return x[0] === sel.value; })[0];
       if (p && p[2]) { var r = p[2](); stato.dal = r[0]; stato.al = r[1]; }
       disegna();
-    });
+      sel.blur();
+    }
+    sel.addEventListener("input", sceltoPeriodo);
+    sel.addEventListener("change", sceltoPeriodo);
     ["dal", "al"].forEach(function (id) {
       document.getElementById(id).addEventListener("change", function (ev) {
-        stato[id] = ev.target.value || null; sel.value = "su"; disegna();
+        stato[id] = ev.target.value || null; sel.value = "su"; ultimoPeriodo = "su"; disegna();
       });
     });
     document.getElementById("l-progetto").textContent = T.progetto;
@@ -587,9 +593,16 @@ footer a { color: inherit; }
     selP.innerHTML = '<option value="">' + esc(T.tutti_progetti) + "</option>" + percorsi.map(function (p) {
       return '<option value="' + esc(p) + '" title="' + esc(p) + '">' + esc(D.progetti[p].nome) + "</option>";
     }).join("");
-    selP.addEventListener("change", function () {
-      stato.progetto = selP.value || null; stato.tutteSessioni = false; disegna();
-    });
+    // "input" arriva subito alla scelta; "change" in alcuni browser solo quando
+    // si clicca altrove. Si ascoltano entrambi e si ridisegna una volta sola.
+    function sceltoProgetto() {
+      var nuovo = selP.value || null;
+      if (nuovo === stato.progetto) return;
+      stato.progetto = nuovo; stato.tutteSessioni = false; disegna();
+      selP.blur();   // senza, il contorno di sistema copre l'evidenza finche' non si clicca altrove
+    }
+    selP.addEventListener("input", sceltoProgetto);
+    selP.addEventListener("change", sceltoProgetto);
   }
 
   var avvisiFissi = [];
