@@ -369,7 +369,7 @@ footer a { color: inherit; }
       [T.costo_claude, soldi(r.costo, "USD"), conv ? [[T.in_valuta, conv.trim()]] : []],
       [T.ore_persona, dec(r.ore), [[T.giorni_persona, dec(r.giorniPersona)]]],
       [T.persone, dec(r.personeGruppo), []],
-      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), tariffa != null ? [[T.tariffa_breve, soldi(tariffa, D.valuta) + "/h"]] : []]
+      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), tariffa != null ? [[T.tariffa, soldi(tariffa, D.valuta) + "/h"]] : []]
     ];
     document.getElementById("riquadri").innerHTML = voci.map(function (v) {
       return '<div class="riquadro"><div class="etichetta">' + esc(v[0]) + '</div><div class="valore">' + esc(v[1]) +

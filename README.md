@@ -150,7 +150,7 @@ che ora arrivano i dati.
   oltre 30 minuti); per un progetto, giorni-persona diviso i giorni in cui ci
   si è lavorato.
 - **Costo del lavoro umano** = ore-persona per 10 € l'ora (45 $ in inglese).
-  La tariffa si cambia nella casella *Tariffa oraria lavoro umano* della pagina (che la ricorda) o
+  La tariffa si cambia nella casella *Tariffa* della pagina (che la ricorda) o
   da terminale con `--tariffa 15`. Il costo di Claude è convertito con il
   cambio BCE del giorno.
 
@@ -252,7 +252,7 @@ amount: it shows what the usage would have cost. Human work is an estimate:
 the average of (A) output volume at a human pace (30 lines of code or 500
 words per hour) and (B) actions taken at fixed times (read a file 3 min, edit
 10, create 15, run a command 5...). People = how many would be needed to
-finish in the same time. Human cost = person-hours at $45/hour, adjustable in the page's *Human work hourly rate* box or with `--rate`. Every
+finish in the same time. Human cost = person-hours at $45/hour, adjustable in the page's *Rate* box or with `--rate`. Every
 parameter can be changed: `consumo-claude --settings`.
 
 ## Privacy
