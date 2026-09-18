@@ -90,6 +90,8 @@ def argomenti(argv):
     a.add_argument("--json", action="store_true", help="stampa i dati calcolati in JSON, per altri programmi")
     a.add_argument("--offline", action="store_true", help="non aggiornare cambio e listino prezzi da internet")
     a.add_argument("--listino", "--prices", action="store_true", help="mostra il listino prezzi usato")
+    a.add_argument("--tariffa", "--rate", type=float, metavar="N",
+                   help="tariffa oraria del lavoro umano (predefinita 10 euro, o 45 dollari in inglese)")
     a.add_argument("--senza-archivio", "--no-cache", action="store_true", help="rileggi tutte le cronologie")
     a.add_argument("--impostazioni", "--settings", action="store_true",
                    help="crea (se manca) e mostra il file delle impostazioni personali")
@@ -162,7 +164,7 @@ def main(argv=None):
     valuta = imp.get("valuta", "auto")
     if valuta == "auto":
         valuta = "EUR" if lingua == "it" else "USD"
-    tariffa = imp["tariffa_oraria"].get(valuta)
+    tariffa = arg.tariffa if arg.tariffa is not None and arg.tariffa >= 0 else imp["tariffa_oraria"].get(valuta)
     tasso, fonte_cambio, data_cambio = cambio.cambio(valuta, imp, not arg.offline)
 
     radice = lettura.cartella_cronologie(arg.cartella)

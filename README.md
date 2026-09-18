@@ -144,7 +144,9 @@ consuma qualche migliaio di token ogni volta. Da terminale non costa nulla.
   oltre 30 minuti); per un progetto, giorni-persona diviso i giorni in cui ci
   si è lavorato.
 - **Costo del lavoro umano** = ore-persona per 10 € l'ora (45 $ in inglese).
-  Il costo di Claude è convertito con il cambio BCE del giorno.
+  La tariffa si cambia nella casella *Tariffa* della pagina (che la ricorda) o
+  da terminale con `--tariffa 15`. Il costo di Claude è convertito con il
+  cambio BCE del giorno.
 
 Tutti i numeri si cambiano: `consumo-claude --impostazioni` crea le copie
 personali di `impostazioni.json` e `prezzi.json` e dice dove sono.
@@ -242,7 +244,7 @@ amount: it shows what the usage would have cost. Human work is an estimate:
 the average of (A) output volume at a human pace (30 lines of code or 500
 words per hour) and (B) actions taken at fixed times (read a file 3 min, edit
 10, create 15, run a command 5...). People = how many would be needed to
-finish in the same time. Human cost = person-hours at $45/hour. Every
+finish in the same time. Human cost = person-hours at $45/hour, adjustable in the page's *Rate* box or with `--rate`. Every
 parameter can be changed: `consumo-claude --settings`.
 
 ## Privacy

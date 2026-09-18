@@ -92,6 +92,9 @@ select, input[type=date], button {
 }
 button { cursor: pointer; }
 #progetto { max-width: 100%; }
+.tariffa { display: inline-flex; align-items: center; gap: 4px; color: var(--testo-2); font-size: 13px; }
+#tariffa { width: 5.5em; font: inherit; font-size: 14px; color: var(--testo); background: var(--superficie);
+  border: 1px solid var(--bordo); border-radius: 8px; padding: 6px 8px; }
 .riquadri { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .riquadro, .blocco {
   background: var(--superficie); border: 1px solid var(--bordo); border-radius: 12px; padding: 14px 16px;
@@ -163,6 +166,8 @@ footer a { color: inherit; }
     <input type="date" id="al" aria-label="al">
     <label for="progetto" id="l-progetto"></label>
     <select id="progetto"></select>
+    <label for="tariffa" id="l-tariffa"></label>
+    <span class="tariffa"><input type="number" id="tariffa" min="0" step="0.5" inputmode="decimal"><span id="u-tariffa"></span></span>
   </div>
 
   <section class="riquadri" id="riquadri"></section>
@@ -276,7 +281,15 @@ footer a { color: inherit; }
     r.personeSessione = r.minuti >= 1 ? r.ore / (r.minuti / 60) : null;
     return r;
   }
-  function umano(r) { return D.tariffa ? r.ore * D.tariffa : null; }
+  // Tariffa oraria del lavoro umano: quella del programma, o l'ultima scritta
+  // nella casella della pagina (ricordata per valuta).
+  var chiaveTariffa = "consumo-claude-tariffa-" + D.valuta;
+  var tariffa = D.tariffa;
+  try {
+    var salvata = parseFloat(localStorage.getItem(chiaveTariffa));
+    if (isFinite(salvata) && salvata >= 0) tariffa = salvata;
+  } catch (e) {}
+  function umano(r) { return tariffa != null ? r.ore * tariffa : null; }
 
   // ---- stato ----
   var oggi = giorno(Date.now() / 1000);
@@ -328,7 +341,7 @@ footer a { color: inherit; }
       [T.costo_claude, soldi(r.costo, "USD"), conv.trim()],
       [T.ore_persona, dec(r.ore), T.giorni_persona + ": " + dec(r.giorniPersona)],
       [T.persone, dec(r.personeGruppo), ""],
-      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), D.tariffa ? soldi(D.tariffa, D.valuta) + "/h" : ""]
+      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), tariffa != null ? soldi(tariffa, D.valuta) + "/h" : ""]
     ];
     document.getElementById("riquadri").innerHTML = voci.map(function (v) {
       return '<div class="riquadro"><div class="etichetta">' + esc(v[0]) + '</div><div class="valore">' + esc(v[1]) +
@@ -548,6 +561,22 @@ footer a { color: inherit; }
     else if (D.illeggibili) note.push(sost(T.avviso_illeggibili, numero(D.illeggibili)));
     document.getElementById("note-fondo").innerHTML = note.map(function (a) { return '<p class="nota-fondo">' + esc(a) + "</p>"; }).join("");
 
+    document.getElementById("piede").innerHTML = esc(T.firma) + ' · <a href="https://horizonpeak.it">horizonpeak.it</a> · ' + esc(D.generato.replace("T", " "));
+
+    document.getElementById("l-tariffa").textContent = T.tariffa;
+    document.getElementById("u-tariffa").textContent = (simboli[D.valuta] || D.valuta) + "/h";
+    var casella = document.getElementById("tariffa");
+    casella.value = tariffa != null ? tariffa : "";
+    casella.addEventListener("input", function () {
+      var v = parseFloat(casella.value.replace(",", "."));
+      if (!isFinite(v) || v < 0) return;
+      tariffa = v;
+      try { localStorage.setItem(chiaveTariffa, String(v)); } catch (e) {}
+      disegna();
+    });
+  }
+
+  function metodo() {
     var az = P.metodo_b_minuti_per_azione;
     var elenco = Object.keys(az).map(function (k) { return (T.azioni_nomi[k] || k) + " " + az[k] + " " + T.minuti; }).join(", ");
     var cambio = "";
@@ -560,12 +589,13 @@ footer a { color: inherit; }
       sost(T.metodo_token, D.prezzi_verificati),
       sost(T.metodo_umano, P.metodo_a_volume.righe_codice_ora, P.metodo_a_volume.parole_testo_ora, elenco),
       sost(T.metodo_persone, P.ore_giornata, P.pausa_massima_minuti),
-      D.tariffa ? sost(T.metodo_costo, soldi(D.tariffa, D.valuta)) + " " + cambio : cambio
+      tariffa != null ? sost(T.metodo_costo, soldi(tariffa, D.valuta)) + " " + cambio : cambio
     ];
     document.getElementById("metodo").innerHTML = "<h2>" + esc(T.metodo_titolo) + "</h2>" +
       paragrafi.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("");
-    document.getElementById("piede").innerHTML = esc(T.firma) + ' · <a href="https://horizonpeak.it">horizonpeak.it</a> · ' + esc(D.generato.replace("T", " "));
+  }
 
+  function menuPeriodo() {
     var sel = document.getElementById("periodo");
     sel.innerHTML = PERIODI.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + "</option>"; }).join("");
     sel.value = stato.dal || stato.al ? "su" : "tutto";
@@ -630,6 +660,7 @@ footer a { color: inherit; }
 
   function disegna() {
     avvisi();
+    metodo();
     document.getElementById("dal").value = stato.dal || primo;
     document.getElementById("al").value = stato.al || oggi;
     var selP = document.getElementById("progetto");
@@ -644,6 +675,7 @@ footer a { color: inherit; }
   }
 
   testiFissi();
+  menuPeriodo();
   listino();
   disegna();
   var attesa;
