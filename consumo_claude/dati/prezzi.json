@@ -1,0 +1,144 @@
+{
+ "_nota": "Dollari per milione di token, listino API Anthropic. Aggiornare quando escono modelli nuovi: i modelli assenti da qui compaiono come 'prezzo sconosciuto'.",
+ "verificati_il": "2026-09-18",
+ "fonte": "https://platform.claude.com/docs/en/about-claude/pricing",
+ "modelli": {
+  "claude-fable-5-1": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 0.25
+  },
+  "claude-mythos-5-1": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 0.25
+  },
+  "claude-fable-5": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 1.0
+  },
+  "claude-mythos-5": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 1.0
+  },
+  "claude-opus-5": {
+   "letti": 5,
+   "scritti": 25,
+   "cache_5m": 6.25,
+   "cache_1h": 10,
+   "riletti": 0.5
+  },
+  "claude-opus-4-8": {
+   "letti": 5,
+   "scritti": 25,
+   "cache_5m": 6.25,
+   "cache_1h": 10,
+   "riletti": 0.5
+  },
+  "claude-opus-4-7": {
+   "letti": 5,
+   "scritti": 25,
+   "cache_5m": 6.25,
+   "cache_1h": 10,
+   "riletti": 0.5
+  },
+  "claude-opus-4-6": {
+   "letti": 5,
+   "scritti": 25,
+   "cache_5m": 6.25,
+   "cache_1h": 10,
+   "riletti": 0.5
+  },
+  "claude-opus-4-5": {
+   "letti": 5,
+   "scritti": 25,
+   "cache_5m": 6.25,
+   "cache_1h": 10,
+   "riletti": 0.5
+  },
+  "claude-opus-4-1": {
+   "letti": 15,
+   "scritti": 75,
+   "cache_5m": 18.75,
+   "cache_1h": 30,
+   "riletti": 1.5
+  },
+  "claude-opus-4": {
+   "letti": 15,
+   "scritti": 75,
+   "cache_5m": 18.75,
+   "cache_1h": 30,
+   "riletti": 1.5
+  },
+  "claude-sonnet-5": {
+   "letti": 2,
+   "scritti": 10,
+   "cache_5m": 2.5,
+   "cache_1h": 4,
+   "riletti": 0.2
+  },
+  "claude-sonnet-4-6": {
+   "letti": 3,
+   "scritti": 15,
+   "cache_5m": 3.75,
+   "cache_1h": 6,
+   "riletti": 0.3
+  },
+  "claude-sonnet-4-5": {
+   "letti": 3,
+   "scritti": 15,
+   "cache_5m": 3.75,
+   "cache_1h": 6,
+   "riletti": 0.3
+  },
+  "claude-sonnet-4": {
+   "letti": 3,
+   "scritti": 15,
+   "cache_5m": 3.75,
+   "cache_1h": 6,
+   "riletti": 0.3
+  },
+  "claude-haiku-4-5": {
+   "letti": 1,
+   "scritti": 5,
+   "cache_5m": 1.25,
+   "cache_1h": 2,
+   "riletti": 0.1
+  },
+  "claude-3-5-haiku": {
+   "letti": 0.8,
+   "scritti": 4,
+   "cache_5m": 1.0,
+   "cache_1h": 1.6,
+   "riletti": 0.08
+  }
+ },
+ "modalita_veloce": {
+  "claude-opus-5": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 1.0
+  },
+  "claude-opus-4-8": {
+   "letti": 10,
+   "scritti": 50,
+   "cache_5m": 12.5,
+   "cache_1h": 20,
+   "riletti": 1.0
+  }
+ },
+ "ricerca_web_per_mille": 10,
+ "moltiplicatore_solo_usa": 1.1
+}

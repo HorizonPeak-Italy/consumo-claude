@@ -1,0 +1,14 @@
+{
+  "name": "consumo-claude",
+  "displayName": "Consumo Claude",
+  "version": "0.1.0",
+  "description": "Token, costo in dollari e lavoro umano equivalente delle sessioni di Claude Code, per progetto e per sessione. / Tokens, dollar cost and equivalent human work of your Claude Code sessions, per project and per session.",
+  "author": {
+    "name": "Horizon Peak srls",
+    "url": "https://horizonpeak.it"
+  },
+  "homepage": "https://horizonpeak.it",
+  "repository": "https://github.com/HorizonPeak-Italy/consumo-claude",
+  "license": "Apache-2.0",
+  "keywords": ["usage", "tokens", "cost", "consumo", "token", "costi"]
+}

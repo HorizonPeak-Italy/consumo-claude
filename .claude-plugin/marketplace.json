@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "horizonpeak",
+  "description": "Strumenti di Horizon Peak srls per Claude Code",
+  "owner": {
+    "name": "Horizon Peak srls",
+    "url": "https://horizonpeak.it"
+  },
+  "plugins": [
+    {
+      "name": "consumo-claude",
+      "source": "./",
+      "description": "Token, costo e lavoro umano equivalente delle sessioni di Claude Code / Tokens, cost and human-equivalent work of Claude Code sessions"
+    }
+  ]
+}

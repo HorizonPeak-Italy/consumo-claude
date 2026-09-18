@@ -1,0 +1,16 @@
+#!/bin/sh
+# Lanciatore: trova Python 3 e avvia il programma che sta accanto a questa cartella.
+# Segue i collegamenti (es. ~/.local/bin/consumo-claude) fino al file vero.
+f=$0
+while [ -L "$f" ]; do
+  l=$(readlink "$f")
+  case $l in /*) f=$l ;; *) f=$(dirname "$f")/$l ;; esac
+done
+qui=$(cd "$(dirname "$f")/.." && pwd)
+for py in python3 python py; do
+  if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; sys.exit(sys.version_info < (3, 8))' 2>/dev/null; then
+    PYTHONPATH="$qui${PYTHONPATH:+:$PYTHONPATH}" exec "$py" -m consumo_claude "$@"
+  fi
+done
+echo "consumo-claude: serve Python 3.8 o successivo (https://www.python.org/downloads/)" >&2
+exit 1

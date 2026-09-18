@@ -1,0 +1,57 @@
+{
+ "_nota": "Parametri della stima del lavoro umano. Si modificano copiando questo file nella cartella delle impostazioni (consumo-claude --impostazioni dice dove).",
+ "metodo_a_volume": {
+  "righe_codice_ora": 30,
+  "parole_testo_ora": 500
+ },
+ "metodo_b_minuti_per_azione": {
+  "leggere": 3,
+  "cercare": 5,
+  "comando": 5,
+  "modificare": 10,
+  "creare": 15,
+  "web": 10,
+  "browser": 1
+ },
+ "strumenti": {
+  "Read": "leggere",
+  "NotebookRead": "leggere",
+  "Grep": "cercare",
+  "Glob": "cercare",
+  "LS": "cercare",
+  "Bash": "comando",
+  "PowerShell": "comando",
+  "Edit": "modificare",
+  "MultiEdit": "modificare",
+  "NotebookEdit": "modificare",
+  "Write": "creare",
+  "WebSearch": "web",
+  "WebFetch": "web",
+  "mcp__claude-in-chrome__*": "browser",
+  "mcp__Claude_Browser__*": "browser",
+  "mcp__playwright__*": "browser"
+ },
+ "estensioni_testo": [
+  ".md",
+  ".markdown",
+  ".txt",
+  ".rst",
+  ".rtf",
+  ".adoc",
+  ".org",
+  ".tex"
+ ],
+ "ore_giornata": 8,
+ "pausa_massima_minuti": 30,
+ "valuta": "auto",
+ "tariffa_oraria": {
+  "EUR": 20,
+  "USD": 45
+ },
+ "cambio_da_dollaro": {
+  "USD": 1,
+  "EUR": 0.871
+ },
+ "cambio_automatico": true,
+ "_nota_cambio": "Con cambio_automatico il cambio si aggiorna a ogni lancio (al massimo ogni 12 ore) dai tassi BCE di frankfurter.dev, senza mandare alcun dato. cambio_da_dollaro si usa solo senza internet e senza un cambio gia' salvato."
+}

@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="__LINGUA__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITOLO__</title>
+<style>
+:root {
+  color-scheme: light;
+  --sfondo: #f6f6f4;
+  --superficie: #fcfcfb;
+  --bordo: #e4e3df;
+  --griglia: #ecebe7;
+  --testo: #0b0b0b;
+  --testo-2: #52514e;
+  --testo-3: #76756f;
+  --serie: #2a78d6;
+  --serie-tenue: rgba(42, 120, 214, .10);
+  --avviso: #8a5a00;
+  --avviso-sfondo: #fff6e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --sfondo: #111110;
+    --superficie: #1a1a19;
+    --bordo: #2e2e2c;
+    --griglia: #262625;
+    --testo: #ffffff;
+    --testo-2: #c3c2b7;
+    --testo-3: #9a998f;
+    --serie: #3987e5;
+    --serie-tenue: rgba(57, 135, 229, .16);
+    --avviso: #f0c46a;
+    --avviso-sfondo: #2a2210;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --sfondo: #111110;
+  --superficie: #1a1a19;
+  --bordo: #2e2e2c;
+  --griglia: #262625;
+  --testo: #ffffff;
+  --testo-2: #c3c2b7;
+  --testo-3: #9a998f;
+  --serie: #3987e5;
+  --serie-tenue: rgba(57, 135, 229, .16);
+  --avviso: #f0c46a;
+  --avviso-sfondo: #2a2210;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--sfondo); color: var(--testo);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.sotto { color: var(--testo-2); margin: 2px 0 16px; }
+.avviso {
+  background: var(--avviso-sfondo); color: var(--avviso); border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; margin: 0 0 8px;
+}
+.filtri { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+.filtri label { color: var(--testo-2); font-size: 13px; }
+select, input[type=date], button {
+  font: inherit; font-size: 14px; color: var(--testo); background: var(--superficie);
+  border: 1px solid var(--bordo); border-radius: 8px; padding: 6px 10px;
+}
+button { cursor: pointer; }
+#progetto { max-width: 100%; }
+.riquadri { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.riquadro, .blocco {
+  background: var(--superficie); border: 1px solid var(--bordo); border-radius: 12px; padding: 14px 16px;
+}
+.riquadro .etichetta { color: var(--testo-2); font-size: 13px; }
+.riquadro .valore { font-size: 26px; font-weight: 650; margin-top: 2px; }
+.riquadro .nota { color: var(--testo-3); font-size: 12px; }
+.blocco { margin-bottom: 16px; }
+.due { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media (max-width: 820px) { .due { grid-template-columns: 1fr; } }
+.scorre { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 7px 8px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child, th.s, td.s { text-align: left; }
+td.titolo { white-space: normal; min-width: 200px; text-align: left; }
+th {
+  color: var(--testo-2); font-weight: 600; font-size: 12.5px; border-bottom: 1px solid var(--bordo);
+  cursor: pointer; user-select: none;
+}
+th[data-ord]::after { content: " " attr(data-ord); color: var(--testo-3); }
+tbody tr { border-bottom: 1px solid var(--griglia); }
+tbody tr.clic { cursor: pointer; }
+tbody tr.clic:hover { background: var(--serie-tenue); }
+tbody tr.scelto { background: var(--serie-tenue); }
+tfoot td { font-weight: 650; border-top: 1px solid var(--bordo); }
+.vuoto { color: var(--testo-2); padding: 16px 0; }
+.piccolo { color: var(--testo-3); font-size: 12.5px; }
+svg text { fill: var(--testo-2); font-size: 11px; }
+.suggerimento {
+  position: fixed; pointer-events: none; background: var(--superficie); color: var(--testo);
+  border: 1px solid var(--bordo); border-radius: 8px; padding: 6px 10px; font-size: 13px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; z-index: 10;
+}
+.metodo p { color: var(--testo-2); margin: 0 0 8px; font-size: 14px; }
+footer { color: var(--testo-3); font-size: 13px; margin-top: 24px; text-align: center; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="titolo"></h1>
+  <p class="sotto" id="sottotitolo"></p>
+  <div id="avvisi"></div>
+
+  <div class="filtri">
+    <label for="periodo" id="l-periodo"></label>
+    <select id="periodo"></select>
+    <input type="date" id="dal" aria-label="dal">
+    <input type="date" id="al" aria-label="al">
+    <label for="progetto" id="l-progetto"></label>
+    <select id="progetto"></select>
+  </div>
+
+  <section class="riquadri" id="riquadri"></section>
+
+  <div class="due">
+    <section class="blocco">
+      <h2 id="t-andamento"></h2>
+      <div id="grafico"></div>
+    </section>
+    <section class="blocco">
+      <h2 id="t-modelli"></h2>
+      <div id="modelli"></div>
+    </section>
+  </div>
+
+  <section class="blocco">
+    <h2 id="t-progetti"></h2>
+    <p class="piccolo" id="t-clic"></p>
+    <div class="scorre"><table id="tab-progetti"></table></div>
+  </section>
+
+  <section class="blocco">
+    <h2 id="t-sessioni"></h2>
+    <div class="scorre"><table id="tab-sessioni"></table></div>
+    <div id="altre"></div>
+  </section>
+
+  <section class="blocco metodo" id="metodo"></section>
+
+  <footer id="piede"></footer>
+</main>
+<div class="suggerimento" id="sugg"></div>
+
+<script type="application/json" id="dati">__DATI__</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("dati").textContent);
+  var T = D.testi;
+  var P = D.parametri;
+  var I = {};
+  D.campi.forEach(function (c, i) { I[c] = i + 2; });
+  var locale = D.lingua === "it" ? "it-IT" : "en-US";
+  var simboli = { EUR: "€", USD: "$", GBP: "£" };
+
+  // ---- formattazione (come in testi.py) ----
+  function numero(x, dec) {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0, useGrouping: "always" }).format(x);
+  }
+  // Grandi numeri leggibili: 1,7 miliardi / 140 milioni / 57 mila (1.7B in inglese).
+  function token(x, conParola) {
+    var it = D.lingua === "it";
+    var unita = it ? [[1e9, "miliardo", "miliardi"], [1e6, "milione", "milioni"], [1e3, "mila", "mila"]]
+                   : [[1e9, "B", "B"], [1e6, "M", "M"], [1e3, "K", "K"]];
+    for (var i = 0; i < unita.length; i++) {
+      if (x >= unita[i][0]) {
+        var v = x / unita[i][0], t = numero(v, v < 100 ? 1 : 0).replace(/[.,]0$/, "");
+        if (!it) return t + unita[i][2] + (conParola ? " tokens" : "");
+        t += " " + (unita[i][0] > 1e3 && t === "1" ? unita[i][1] : unita[i][2]);
+        return t + (conParola ? (unita[i][0] > 1e3 ? " di token" : " token") : "");
+      }
+    }
+    return numero(x) + (conParola ? (it ? " token" : " tokens") : "");
+  }
+  function soldi(x, valuta) {
+    var sim = simboli[valuta] || valuta;
+    var t = numero(x, x < 100 ? 2 : 0);
+    return (D.lingua === "it" || valuta !== "USD") ? t + " " + sim : sim + t;
+  }
+  function dec(x) { return x == null ? "-" : numero(x, x < 100 ? 1 : 0); }
+  function durata(min) {
+    var m = Math.round(min);
+    return m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : m + " min";
+  }
+  function giorno(sec) {
+    var d = new Date(sec * 1000);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; });
+  }
+
+  // ---- calcoli (come in calcolo.py) ----
+  function riepiloga(celle) {
+    var v = D.campi.map(function () { return 0; });
+    var giorni = {};
+    celle.forEach(function (c) {
+      giorni[c[1]] = 1;
+      for (var i = 0; i < v.length; i++) v[i] += c[i + 2];
+    });
+    var ore = (v[I.ore_a - 2] + v[I.ore_b - 2]) / 2;
+    var r = { v: v, ore: ore, giorniPersona: ore / P.ore_giornata, giorniAttivi: Object.keys(giorni).length };
+    r.costo = v[I.costo - 2];
+    r.minuti = v[I.minuti - 2];
+    r.token = v[I.letti - 2] + v[I.scritti - 2] + v[I.cache_scritti - 2] + v[I.cache_riletti - 2];
+    r.personeGruppo = r.giorniAttivi ? r.giorniPersona / r.giorniAttivi : null;
+    r.personeSessione = r.minuti >= 1 ? r.ore / (r.minuti / 60) : null;
+    return r;
+  }
+  function umano(r) { return D.tariffa ? r.ore * D.tariffa : null; }
+
+  // ---- stato ----
+  var oggi = giorno(Date.now() / 1000);
+  var primo = D.celle.length ? D.celle[0][1] : oggi;
+  D.celle.forEach(function (c) { if (c[1] < primo) primo = c[1]; });
+  var stato = {
+    dal: D.iniziale.dal, al: D.iniziale.al, progetto: D.iniziale.progetto,
+    ordP: { col: 3, giu: true }, ordS: { col: 0, giu: true }, tutteSessioni: false
+  };
+
+  function spostaGiorni(n) {
+    var d = new Date(); d.setDate(d.getDate() - n);
+    return giorno(d.getTime() / 1000);
+  }
+  function data(d) { return giorno(d.getTime() / 1000); }
+  function spostato(n) { var d = new Date(); d.setDate(d.getDate() - n); return d; }
+  function lunedi(settimaneFa) {
+    var d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7 - 7 * settimaneFa); return d;
+  }
+  var PERIODI = [
+    ["tutto", T.tutto, function () { return [null, null]; }],
+    ["oggi", T.oggi, function () { return [oggi, oggi]; }],
+    ["ieri", T.ieri, function () { var d = data(spostato(1)); return [d, d]; }],
+    ["7", T.ultimi_7, function () { return [spostaGiorni(6), oggi]; }],
+    ["sett", T.questa_settimana, function () { return [data(lunedi(0)), oggi]; }],
+    ["sett-1", T.settimana_scorsa, function () {
+      var fine = lunedi(0); fine.setDate(fine.getDate() - 1); return [data(lunedi(1)), data(fine)];
+    }],
+    ["30", T.ultimi_30, function () { return [spostaGiorni(29), oggi]; }],
+    ["mese", T.questo_mese, function () { return [oggi.slice(0, 8) + "01", oggi]; }],
+    ["mese-1", T.mese_scorso, function () {
+      var d = new Date(); d.setDate(0); var fine = data(d); return [fine.slice(0, 8) + "01", fine];
+    }],
+    ["90", T.ultimi_90, function () { return [spostaGiorni(89), oggi]; }],
+    ["anno", T.questo_anno, function () { return [oggi.slice(0, 5) + "01-01", oggi]; }],
+    ["su", T.personalizzato, null]
+  ];
+
+  function nelPeriodo(g) { return (!stato.dal || g >= stato.dal) && (!stato.al || g <= stato.al); }
+  function delProgetto(sid) { return !stato.progetto || D.sessioni[sid].progetto === stato.progetto; }
+  function celleScelte() { return D.celle.filter(function (c) { return nelPeriodo(c[1]) && delProgetto(c[0]); }); }
+
+  // ---- disegno ----
+  function riquadri(r) {
+    var conv = D.cambio.tasso && D.valuta !== "USD" ? " ≈ " + soldi(r.costo * D.cambio.tasso, D.valuta) : "";
+    var u = umano(r);
+    var voci = [
+      [T.token, token(r.token), T.letti + " " + token(r.v[I.letti - 2]) + " · " + T.scritti + " " + token(r.v[I.scritti - 2])],
+      [T.costo_claude, soldi(r.costo, "USD"), conv.trim()],
+      [T.ore_persona, dec(r.ore), T.giorni_persona + ": " + dec(r.giorniPersona)],
+      [T.persone, dec(r.personeGruppo), ""],
+      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), D.tariffa ? soldi(D.tariffa, D.valuta) + "/h" : ""]
+    ];
+    document.getElementById("riquadri").innerHTML = voci.map(function (v) {
+      return '<div class="riquadro"><div class="etichetta">' + esc(v[0]) + '</div><div class="valore">' + esc(v[1]) +
+        '</div><div class="nota">' + esc(v[2]) + "</div></div>";
+    }).join("");
+  }
+
+  function scalaPulita(max) {
+    if (max <= 0) return [0, 1];
+    var passo = Math.pow(10, Math.floor(Math.log10(max)));
+    var tacche = [1, 2, 2.5, 5, 10];
+    for (var i = 0; i < tacche.length; i++) { if (max / (passo * tacche[i]) <= 5) { passo *= tacche[i]; break; } }
+    var out = [];
+    for (var v = 0; v <= max + passo * 0.999; v += passo) out.push(v);
+    return out;
+  }
+
+  var sugg = document.getElementById("sugg");
+  function mostraSugg(ev, html) {
+    sugg.innerHTML = html; sugg.style.display = "block";
+    var x = Math.min(ev.clientX + 12, window.innerWidth - sugg.offsetWidth - 8);
+    sugg.style.left = x + "px"; sugg.style.top = (ev.clientY + 12) + "px";
+  }
+  function nascondiSugg() { sugg.style.display = "none"; }
+
+  function grafico(celle) {
+    var box = document.getElementById("grafico");
+    if (!celle.length) { box.innerHTML = '<p class="vuoto">' + esc(T.nessun_dato) + "</p>"; return; }
+    var da = stato.dal || celle.reduce(function (m, c) { return c[1] < m ? c[1] : m; }, "9999");
+    var a = stato.al || celle.reduce(function (m, c) { return c[1] > m ? c[1] : m; }, "0000");
+    var giorni = [];
+    for (var d = new Date(da + "T12:00:00"); giorno(d.getTime() / 1000) <= a; d.setDate(d.getDate() + 1)) giorni.push(giorno(d.getTime() / 1000));
+    var perMese = giorni.length > 120;
+    var chiavi = [], somme = {};
+    giorni.forEach(function (g) { var k = perMese ? g.slice(0, 7) : g; if (!(k in somme)) { somme[k] = 0; chiavi.push(k); } });
+    celle.forEach(function (c) { var k = perMese ? c[1].slice(0, 7) : c[1]; if (k in somme) somme[k] += c[I.costo]; });
+
+    var W = Math.max(box.clientWidth, 280), H = 220, sx = 48, dx = 8, su = 10, giu = 26;
+    var max = Math.max.apply(null, chiavi.map(function (k) { return somme[k]; }));
+    var tacche = scalaPulita(max), top = tacche[tacche.length - 1] || 1;
+    var slot = (W - sx - dx) / chiavi.length, larg = Math.max(1, Math.min(24, slot - 2));
+    var y = function (v) { return su + (H - su - giu) * (1 - v / top); };
+    var s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="' + esc(T.andamento) + '">';
+    tacche.forEach(function (t) {
+      s += '<line x1="' + sx + '" x2="' + (W - dx) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--griglia)" stroke-width="1"/>';
+      s += '<text x="' + (sx - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + esc(soldi(t, "USD")) + "</text>";
+    });
+    var ogni = Math.ceil(chiavi.length / Math.max(1, Math.floor((W - sx) / 70)));
+    chiavi.forEach(function (k, i) {
+      var v = somme[k], cx = sx + slot * i + slot / 2, h = Math.max(0, y(0) - y(v));
+      if (h > 0) {
+        var r = Math.min(4, larg / 2, h), x0 = cx - larg / 2, y0 = y(v);
+        s += '<path fill="var(--serie)" d="M' + x0 + "," + y(0) + "V" + (y0 + r) + "Q" + x0 + "," + y0 + " " + (x0 + r) + "," + y0 +
+          "H" + (x0 + larg - r) + "Q" + (x0 + larg) + "," + y0 + " " + (x0 + larg) + "," + (y0 + r) + "V" + y(0) + 'Z"/>';
+      }
+      s += '<rect class="zona" data-k="' + k + '" x="' + (sx + slot * i) + '" y="' + su + '" width="' + slot + '" height="' + (H - su - giu) + '" fill="transparent"/>';
+      if (i % ogni === 0) s += '<text x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(perMese ? k : k.slice(5)) + "</text>";
+    });
+    s += '<line x1="' + sx + '" x2="' + (W - dx) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--bordo)" stroke-width="1"/></svg>';
+    box.innerHTML = s;
+    box.querySelectorAll(".zona").forEach(function (z) {
+      z.addEventListener("mousemove", function (ev) { var k = z.getAttribute("data-k"); mostraSugg(ev, "<b>" + esc(k) + "</b><br>" + esc(soldi(somme[k], "USD"))); });
+      z.addEventListener("mouseleave", nascondiSugg);
+    });
+  }
+
+  function modelli() {
+    var box = document.getElementById("modelli"), somme = {};
+    D.modelli.forEach(function (m) {
+      if (nelPeriodo(m[1]) && delProgetto(m[0])) {
+        var x = somme[m[2]] || (somme[m[2]] = [0, 0]); x[0] += m[3]; x[1] += m[4];
+      }
+    });
+    var voci = Object.keys(somme).sort(function (a, b) { return somme[b][1] - somme[a][1] || somme[b][0] - somme[a][0]; });
+    if (!voci.length) { box.innerHTML = '<p class="vuoto">' + esc(T.nessun_dato) + "</p>"; return; }
+    var max = Math.max.apply(null, voci.map(function (k) { return somme[k][1]; })) || 1;
+    box.innerHTML = voci.map(function (k) {
+      var p = Math.max(0.5, 100 * somme[k][1] / max);
+      return '<div style="margin:0 0 10px" data-m="' + esc(k) + '"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">' +
+        "<span>" + esc(k) + '</span><span style="color:var(--testo-2)">' + esc(soldi(somme[k][1], "USD")) + "</span></div>" +
+        '<div style="height:10px;margin-top:3px"><div style="height:10px;width:' + p + '%;background:var(--serie);border-radius:0 4px 4px 0"></div></div>' +
+        '<div class="piccolo">' + esc(token(somme[k][0], true)) + "</div></div>";
+    }).join("");
+  }
+
+  function intestazione(tab, colonne, ord, alClic) {
+    var th = colonne.map(function (c, i) {
+      var segno = ord.col === i ? (ord.giu ? "▼" : "▲") : null;
+      return "<th" + (c[1] ? ' class="s"' : "") + (segno ? ' data-ord="' + segno + '"' : "") + ' data-i="' + i + '">' + esc(c[0]) + "</th>";
+    }).join("");
+    tab.insertAdjacentHTML("afterbegin", "<thead><tr>" + th + "</tr></thead>");
+    tab.querySelectorAll("th").forEach(function (h) {
+      h.addEventListener("click", function () {
+        var i = +h.getAttribute("data-i");
+        if (ord.col === i) ord.giu = !ord.giu; else { ord.col = i; ord.giu = i !== 0 && !colonne[i][1]; }
+        alClic();
+      });
+    });
+  }
+  function ordina(righe, ord) {
+    righe.sort(function (a, b) {
+      var x = a.k[ord.col], y = b.k[ord.col];
+      var r = (x == null) - (y == null) || (typeof x === "string" ? x.localeCompare(y) : x - y);
+      return ord.giu ? -r : r;
+    });
+  }
+
+  function tabellaProgetti() {
+    var tab = document.getElementById("tab-progetti");
+    var gruppi = {};
+    D.celle.forEach(function (c) { if (nelPeriodo(c[1])) (gruppi[D.sessioni[c[0]].progetto] = gruppi[D.sessioni[c[0]].progetto] || []).push(c); });
+    var righe = Object.keys(gruppi).map(function (p) {
+      var r = riepiloga(gruppi[p]), n = {};
+      gruppi[p].forEach(function (c) { n[c[0]] = 1; });
+      var ns = Object.keys(n).length, u = umano(r);
+      return { p: p, k: [D.progetti[p].nome, ns, r.token, r.costo, r.ore, r.giorniPersona, r.personeGruppo, u],
+        c: [D.progetti[p].nome, numero(ns), token(r.token), soldi(r.costo, "USD"), dec(r.ore), dec(r.giorniPersona), dec(r.personeGruppo), u == null ? "-" : soldi(u, D.valuta)] };
+    });
+    ordina(righe, stato.ordP);
+    var tot = riepiloga(D.celle.filter(function (c) { return nelPeriodo(c[1]); })), nt = {};
+    D.celle.forEach(function (c) { if (nelPeriodo(c[1])) nt[c[0]] = 1; });
+    var ut = umano(tot);
+    tab.innerHTML = righe.length ? "<tbody>" + righe.map(function (r) {
+      return '<tr class="clic' + (r.p === stato.progetto ? " scelto" : "") + '" data-p="' + esc(r.p) + '" title="' + esc(r.p) + '">' +
+        r.c.map(function (v) { return "<td>" + esc(v) + "</td>"; }).join("") + "</tr>";
+    }).join("") + "</tbody><tfoot><tr><td>" + esc(T.totale) + "</td><td>" + numero(Object.keys(nt).length) + "</td><td>" + token(tot.token) +
+      "</td><td>" + soldi(tot.costo, "USD") + "</td><td>" + dec(tot.ore) + "</td><td>" + dec(tot.giorniPersona) + "</td><td>" + dec(tot.personeGruppo) +
+      "</td><td>" + (ut == null ? "-" : soldi(ut, D.valuta)) + "</td></tr></tfoot>" : "";
+    if (!righe.length) { tab.innerHTML = '<tr><td class="vuoto">' + esc(T.nessun_dato) + "</td></tr>"; return; }
+    intestazione(tab, [[T.progetto, 1], [T.sessioni], [T.token], [T.claude + " $"], [T.ore_persona], [T.giorni], [T.persone], [T.lavoro_umano]], stato.ordP, tabellaProgetti);
+    tab.querySelectorAll("tr.clic").forEach(function (tr) {
+      tr.addEventListener("click", function () {
+        var p = tr.getAttribute("data-p");
+        stato.progetto = stato.progetto === p ? null : p; stato.tutteSessioni = false; disegna();
+      });
+    });
+  }
+
+  function tabellaSessioni() {
+    var tab = document.getElementById("tab-sessioni");
+    document.getElementById("t-sessioni").textContent = stato.progetto ? T.sessioni_di.replace("%s", D.progetti[stato.progetto].nome) : T.sessioni;
+    var gruppi = {};
+    celleScelte().forEach(function (c) { (gruppi[c[0]] = gruppi[c[0]] || []).push(c); });
+    var conProgetto = !stato.progetto;
+    var righe = Object.keys(gruppi).map(function (sid) {
+      var s = D.sessioni[sid], r = riepiloga(gruppi[sid]), u = umano(r), d = giorno(s.inizio);
+      var k = [s.inizio, s.titolo], c = [d, s.titolo];
+      if (conProgetto) { k.push(D.progetti[s.progetto].nome); c.push(D.progetti[s.progetto].nome); }
+      k.push(r.minuti, r.token, r.costo, r.ore, r.personeSessione, u);
+      c.push(durata(r.minuti), token(r.token), soldi(r.costo, "USD"), dec(r.ore), dec(r.personeSessione), u == null ? "-" : soldi(u, D.valuta));
+      return { k: k, c: c, sid: sid };
+    });
+    if (!righe.length) { tab.innerHTML = '<tr><td class="vuoto">' + esc(T.nessun_dato) + "</td></tr>"; document.getElementById("altre").innerHTML = ""; return; }
+    ordina(righe, stato.ordS);
+    var limite = stato.tutteSessioni ? righe.length : 100;
+    tab.innerHTML = "<tbody>" + righe.slice(0, limite).map(function (r) {
+      return '<tr title="' + esc(r.sid) + '">' + r.c.map(function (v, i) {
+        return "<td" + (i === 1 ? ' class="titolo"' : (i === 2 && conProgetto ? ' class="s"' : "")) + ">" + esc(v) + "</td>";
+      }).join("") + "</tr>";
+    }).join("") + "</tbody>";
+    var col = [[T.data, 1], [T.sessione, 1]];
+    if (conProgetto) col.push([T.progetto, 1]);
+    col.push([T.durata], [T.token], [T.claude + " $"], [T.ore_persona], [T.persone], [T.lavoro_umano]);
+    intestazione(tab, col, stato.ordS, tabellaSessioni);
+    var altre = document.getElementById("altre");
+    altre.innerHTML = righe.length > limite ? '<p><button id="piu">+ ' + numero(righe.length - limite) + "</button></p>" : "";
+    if (righe.length > limite) document.getElementById("piu").addEventListener("click", function () { stato.tutteSessioni = true; tabellaSessioni(); });
+  }
+
+  function testiFissi() {
+    document.title = T.titolo;
+    document.getElementById("titolo").textContent = T.titolo;
+    document.getElementById("sottotitolo").textContent = T.sottotitolo;
+    document.getElementById("l-periodo").textContent = T.periodo;
+    document.getElementById("t-andamento").textContent = T.andamento;
+    document.getElementById("t-modelli").textContent = T.modelli;
+    document.getElementById("t-progetti").textContent = T.progetti;
+    document.getElementById("t-clic").textContent = T.clic_progetto;
+    var avvisi = [T.avviso_abbonamento, T.avviso_condivisione];
+    Object.keys(D.ignoti).forEach(function (m) { avvisi.push(T.avviso_ignoti.replace("%s", m).replace("%s", token(D.ignoti[m]))); });
+    if (D.illeggibili === 1) avvisi.push(T.avviso_illeggibili_1);
+    else if (D.illeggibili) avvisi.push(T.avviso_illeggibili.replace("%s", numero(D.illeggibili)));
+    document.getElementById("avvisi").innerHTML = avvisi.map(function (a) { return '<p class="avviso">' + esc(a) + "</p>"; }).join("");
+
+    var az = P.metodo_b_minuti_per_azione;
+    var elenco = Object.keys(az).map(function (k) { return (T.azioni_nomi[k] || k) + " " + az[k] + " " + T.minuti; }).join(", ");
+    var cambio = "";
+    if (D.valuta !== "USD" && D.cambio.tasso) {
+      cambio = D.cambio.fonte === "bce"
+        ? T.cambio_bce.replace("%s", D.cambio.data).replace("%s", numero(D.cambio.tasso, 4)).replace("%s", simboli[D.valuta] || D.valuta)
+        : T.cambio_fisso.replace("%s", numero(D.cambio.tasso, 4)).replace("%s", simboli[D.valuta] || D.valuta);
+    }
+    var paragrafi = [
+      T.metodo_token.replace("%s", D.prezzi_verificati),
+      T.metodo_umano.replace("%s", P.metodo_a_volume.righe_codice_ora).replace("%s", P.metodo_a_volume.parole_testo_ora).replace("%s", elenco),
+      T.metodo_persone.replace("%s", P.ore_giornata).replace("%s", P.pausa_massima_minuti),
+      D.tariffa ? T.metodo_costo.replace("%s", soldi(D.tariffa, D.valuta)) + " " + cambio : cambio
+    ];
+    document.getElementById("metodo").innerHTML = "<h2>" + esc(T.metodo_titolo) + "</h2>" +
+      paragrafi.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("");
+    document.getElementById("piede").innerHTML = esc(T.firma) + ' · <a href="https://horizonpeak.it">horizonpeak.it</a> · ' + esc(D.generato.replace("T", " "));
+
+    var sel = document.getElementById("periodo");
+    sel.innerHTML = PERIODI.map(function (p) { return '<option value="' + p[0] + '">' + esc(p[1]) + "</option>"; }).join("");
+    sel.value = stato.dal || stato.al ? "su" : "tutto";
+    sel.addEventListener("change", function () {
+      var p = PERIODI.filter(function (x) { return x[0] === sel.value; })[0];
+      if (p && p[2]) { var r = p[2](); stato.dal = r[0]; stato.al = r[1]; }
+      disegna();
+    });
+    ["dal", "al"].forEach(function (id) {
+      document.getElementById(id).addEventListener("change", function (ev) {
+        stato[id] = ev.target.value || null; sel.value = "su"; disegna();
+      });
+    });
+    document.getElementById("l-progetto").textContent = T.progetto;
+    var selP = document.getElementById("progetto");
+    var percorsi = Object.keys(D.progetti).sort(function (a, b) {
+      return D.progetti[a].nome.localeCompare(D.progetti[b].nome, locale, { sensitivity: "base" });
+    });
+    selP.innerHTML = '<option value="">' + esc(T.tutti_progetti) + "</option>" + percorsi.map(function (p) {
+      return '<option value="' + esc(p) + '" title="' + esc(p) + '">' + esc(D.progetti[p].nome) + "</option>";
+    }).join("");
+    selP.addEventListener("change", function () {
+      stato.progetto = selP.value || null; stato.tutteSessioni = false; disegna();
+    });
+  }
+
+  function disegna() {
+    document.getElementById("dal").value = stato.dal || primo;
+    document.getElementById("al").value = stato.al || oggi;
+    document.getElementById("progetto").value = stato.progetto || "";
+    var celle = celleScelte();
+    riquadri(riepiloga(celle));
+    grafico(celle);
+    modelli();
+    tabellaProgetti();
+    tabellaSessioni();
+  }
+
+  testiFissi();
+  disegna();
+  var attesa;
+  window.addEventListener("resize", function () { clearTimeout(attesa); attesa = setTimeout(function () { grafico(celleScelte()); }, 150); });
+})();
+</script>
+</body>
+</html>

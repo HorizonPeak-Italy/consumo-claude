@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# Documenti interni: restano solo in locale
+SPECIFICA.md
+CLAUDE.md
