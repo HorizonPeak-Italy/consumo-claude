@@ -56,6 +56,15 @@ body {
 }
 main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
 h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
+.testata {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--bordo); padding-bottom: 12px; margin-bottom: 16px;
+}
+.testata .sotto { margin-bottom: 0; }
+.marchio { display: flex; align-items: center; gap: 10px; color: var(--testo); text-decoration: none; }
+.marchio span { display: flex; flex-direction: column; line-height: 1.2; }
+.marchio b { font-size: 13px; letter-spacing: .14em; }
+.marchio small { color: var(--testo-3); font-size: 12px; }
 h2 { font-size: 17px; margin: 0 0 12px; }
 .sotto { color: var(--testo-2); margin: 2px 0 16px; }
 .avviso {
@@ -104,6 +113,11 @@ svg text { fill: var(--testo-2); font-size: 11px; }
   box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; z-index: 10;
 }
 .metodo p { color: var(--testo-2); margin: 0 0 8px; font-size: 14px; }
+table.modelli td { padding: 6px 4px; }
+table.modelli td.m-nome { text-align: left; white-space: nowrap; }
+table.modelli td.m-barra { width: 40%; }
+table.modelli td.m-barra div { height: 10px; background: var(--serie); border-radius: 0 4px 4px 0; }
+table.modelli td.m-quota { color: var(--testo-2); width: 3.5em; }
 .nota-fondo { color: var(--testo-3); font-size: 13px; margin: 0 0 6px; }
 footer { color: var(--testo-3); font-size: 13px; margin-top: 24px; text-align: center; }
 footer a { color: inherit; }
@@ -111,8 +125,19 @@ footer a { color: inherit; }
 </head>
 <body>
 <main>
-  <h1 id="titolo"></h1>
-  <p class="sotto" id="sottotitolo"></p>
+  <header class="testata">
+    <div>
+      <h1 id="titolo"></h1>
+      <p class="sotto" id="sottotitolo"></p>
+    </div>
+    <a class="marchio" href="https://horizonpeak.it" aria-label="Horizon Peak">
+      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true">
+        <path d="M1 21 L11 5 L16 12 L20 7 L29 21 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M11 5 L13.5 9 L11 8.2 L8.6 9 Z" fill="currentColor"/>
+      </svg>
+      <span><b>HORIZON PEAK</b><small id="aggiornata"></small></span>
+    </a>
+  </header>
   <div id="avvisi"></div>
 
   <div class="filtri">
@@ -207,6 +232,12 @@ footer a { color: inherit; }
   function sost(testo) {
     var valori = Array.prototype.slice.call(arguments, 1), i = 0;
     return testo.replace(/%s/g, function () { return String(valori[i++]); });
+  }
+  // "2026-08-19" -> 19/08/2026 (it) o 8/19/2026 (en); l'ora, se c'e', resta.
+  function dataLeggibile(testo) {
+    var p = testo.split(/[T ]/), g = p[0].split("-");
+    var d = new Date(+g[0], +g[1] - 1, +g[2]).toLocaleDateString(locale);
+    return p[1] ? d + " " + p[1] : d;
   }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; });
@@ -312,6 +343,24 @@ footer a { color: inherit; }
     if (!celle.length) { box.innerHTML = '<p class="vuoto">' + esc(T.nessun_dato) + "</p>"; return; }
     var da = stato.dal || celle.reduce(function (m, c) { return c[1] < m ? c[1] : m; }, "9999");
     var a = stato.al || celle.reduce(function (m, c) { return c[1] > m ? c[1] : m; }, "0000");
+    // Senza una data d'inizio scelta, il grafico parte dal primo giorno con
+    // consumi significativi (almeno l'1% del giorno piu' costoso): pochi
+    // giorni minimi seguiti da settimane vuote schiaccerebbero le barre.
+    // Quei giorni restano nei totali e una riga sotto il grafico li dichiara.
+    var nota = "";
+    if (!stato.dal) {
+      var perGiorno = {};
+      celle.forEach(function (c) { perGiorno[c[1]] = (perGiorno[c[1]] || 0) + c[I.costo]; });
+      var ordinati = Object.keys(perGiorno).sort();
+      var soglia = Math.max.apply(null, ordinati.map(function (g) { return perGiorno[g]; })) * 0.01;
+      var primoVero = ordinati.filter(function (g) { return perGiorno[g] >= soglia; })[0];
+      var esclusi = ordinati.filter(function (g) { return g < primoVero; });
+      if (esclusi.length) {
+        da = primoVero;
+        nota = sost(T.grafico_esclusi, numero(esclusi.length), dataLeggibile(primoVero),
+          soldi(esclusi.reduce(function (t, g) { return t + perGiorno[g]; }, 0), "USD"));
+      }
+    }
     var giorni = [];
     for (var d = new Date(da + "T12:00:00"); giorno(d.getTime() / 1000) <= a; d.setDate(d.getDate() + 1)) giorni.push(giorno(d.getTime() / 1000));
     var perMese = giorni.length > 120;
@@ -341,7 +390,7 @@ footer a { color: inherit; }
       if (i % ogni === 0) s += '<text x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(perMese ? k : k.slice(5)) + "</text>";
     });
     s += '<line x1="' + sx + '" x2="' + (W - dx) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--bordo)" stroke-width="1"/></svg>';
-    box.innerHTML = s;
+    box.innerHTML = s + (nota ? '<p class="piccolo" style="margin:6px 0 0">' + esc(nota) + "</p>" : "");
     box.querySelectorAll(".zona").forEach(function (z) {
       z.addEventListener("mousemove", function (ev) { var k = z.getAttribute("data-k"); mostraSugg(ev, "<b>" + esc(k) + "</b><br>" + esc(soldi(somme[k], "USD"))); });
       z.addEventListener("mouseleave", nascondiSugg);
@@ -358,13 +407,14 @@ footer a { color: inherit; }
     var voci = Object.keys(somme).sort(function (a, b) { return somme[b][1] - somme[a][1] || somme[b][0] - somme[a][0]; });
     if (!voci.length) { box.innerHTML = '<p class="vuoto">' + esc(T.nessun_dato) + "</p>"; return; }
     var max = Math.max.apply(null, voci.map(function (k) { return somme[k][1]; })) || 1;
-    box.innerHTML = voci.map(function (k) {
-      var p = Math.max(0.5, 100 * somme[k][1] / max);
-      return '<div style="margin:0 0 10px" data-m="' + esc(k) + '"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px">' +
-        "<span>" + esc(k) + '</span><span style="color:var(--testo-2)">' + esc(soldi(somme[k][1], "USD")) + "</span></div>" +
-        '<div style="height:10px;margin-top:3px"><div style="height:10px;width:' + p + '%;background:var(--serie);border-radius:0 4px 4px 0"></div></div>' +
-        '<div class="piccolo">' + esc(token(somme[k][0], true)) + "</div></div>";
-    }).join("");
+    var totale = voci.reduce(function (t, k) { return t + somme[k][1]; }, 0) || 1;
+    box.innerHTML = '<table class="modelli"><tbody>' + voci.map(function (k) {
+      var quota = 100 * somme[k][1] / totale;
+      var larg = Math.max(1, 100 * somme[k][1] / max);
+      return '<tr title="' + esc(token(somme[k][0], true)) + '"><td class="m-nome">' + esc(k.replace(/^claude-/, "")) +
+        '</td><td class="m-barra"><div style="width:' + larg + '%"></div></td><td>' + esc(soldi(somme[k][1], "USD")) +
+        '</td><td class="m-quota">' + esc(numero(quota, quota < 10 ? 1 : 0)) + "%</td></tr>";
+    }).join("") + "</tbody></table>" + '<p class="piccolo" style="margin:8px 0 0">' + esc(T.modelli_nota) + "</p>";
   }
 
   function intestazione(tab, colonne, ord, alClic) {
@@ -456,6 +506,7 @@ footer a { color: inherit; }
     document.title = T.titolo;
     document.getElementById("titolo").textContent = T.titolo;
     document.getElementById("sottotitolo").textContent = T.sottotitolo;
+    document.getElementById("aggiornata").textContent = sost(T.aggiornata, dataLeggibile(D.generato));
     document.getElementById("l-periodo").textContent = T.periodo;
     document.getElementById("t-andamento").textContent = T.andamento;
     document.getElementById("t-modelli").textContent = T.modelli;

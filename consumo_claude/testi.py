@@ -93,6 +93,9 @@ TESTI = {
         "cache_1h": "Cache 1 ora",
         "listino_pagina": "Listino prezzi",
         "listino_sotto": "Dollari per milione di token, listino API del %s. Si aggiorna da solo.",
+        "grafico_esclusi": "Esclusi dal grafico %s giorni prima del %s con consumi minimi (%s in tutto): sono comunque nei totali.",
+        "modelli_nota": "Percentuale sul costo totale. Passa sopra una riga per vedere i token.",
+        "aggiornata": "Aggiornata il %s",
         "firma": "Consumo Claude, di Horizon Peak srls",
     },
     "en": {
@@ -183,6 +186,9 @@ TESTI = {
         "cache_1h": "Cache 1 hour",
         "listino_pagina": "Price list",
         "listino_sotto": "Dollars per million tokens, API list prices of %s. Updated automatically.",
+        "grafico_esclusi": "%s days before %s with minimal usage (%s in total) are left out of the chart but included in the totals.",
+        "modelli_nota": "Share of total cost. Hover a row to see the tokens.",
+        "aggiornata": "Updated %s",
         "firma": "Claude Usage (consumo-claude), by Horizon Peak srls",
     },
 }
