@@ -1,7 +1,7 @@
 {
   "name": "consumo-claude",
   "displayName": "Consumo Claude",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Token, costo in dollari e lavoro umano equivalente delle sessioni di Claude Code, per progetto e per sessione. / Tokens, dollar cost and equivalent human work of your Claude Code sessions, per project and per session.",
   "author": {
     "name": "Horizon Peak srls",
