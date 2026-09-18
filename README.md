@@ -143,7 +143,7 @@ consuma qualche migliaio di token ogni volta. Da terminale non costa nulla.
   Claude: per una sessione, ore-persona diviso la durata attiva (senza le pause
   oltre 30 minuti); per un progetto, giorni-persona diviso i giorni in cui ci
   si è lavorato.
-- **Costo del lavoro umano** = ore-persona per 20 € l'ora (45 $ in inglese).
+- **Costo del lavoro umano** = ore-persona per 10 € l'ora (45 $ in inglese).
   Il costo di Claude è convertito con il cambio BCE del giorno.
 
 Tutti i numeri si cambiano: `consumo-claude --impostazioni` crea le copie

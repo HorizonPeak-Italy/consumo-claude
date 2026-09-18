@@ -45,7 +45,7 @@
  "pausa_massima_minuti": 30,
  "valuta": "auto",
  "tariffa_oraria": {
-  "EUR": 20,
+  "EUR": 10,
   "USD": 45
  },
  "cambio_da_dollaro": {
