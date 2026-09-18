@@ -1,5 +1,6 @@
 """Pagina HTML autonoma: un file unico con i dati dentro, senza risorse esterne."""
 
+import base64
 import json
 
 from .calcolo import CAMPI, DATI
@@ -18,5 +19,6 @@ def scrivi(destinazione, rapporto, testi, progetto=None, dal=None, al=None):
     modello = (DATI / "pagina.html").read_text(encoding="utf-8")
     html = (modello.replace("__LINGUA__", rapporto["lingua"])
             .replace("__TITOLO__", testi["titolo"])
+            .replace("__LOGO__", base64.b64encode((DATI / "logo-horizonpeak.png").read_bytes()).decode())
             .replace("__DATI__", carico))
     destinazione.write_text(html, encoding="utf-8")

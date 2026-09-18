@@ -1,9 +1,13 @@
 <!doctype html>
-<html lang="__LINGUA__">
+<html lang="__LINGUA__" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITOLO__</title>
+<script>
+  // Tema: scuro di partenza, poi l'ultima scelta fatta con il pulsante.
+  try { var t = localStorage.getItem("consumo-claude-tema"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
 <style>
 :root {
   color-scheme: light;
@@ -16,8 +20,10 @@
   --testo-3: #76756f;
   --serie: #2a78d6;
   --serie-tenue: rgba(42, 120, 214, .10);
+  --serie-scelta: rgba(42, 120, 214, .22);
   --avviso: #8a5a00;
   --avviso-sfondo: #fff6e0;
+  --logo-filtro: none;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -31,8 +37,10 @@
     --testo-3: #9a998f;
     --serie: #3987e5;
     --serie-tenue: rgba(57, 135, 229, .16);
+    --serie-scelta: rgba(57, 135, 229, .34);
     --avviso: #f0c46a;
     --avviso-sfondo: #2a2210;
+    --logo-filtro: invert(1);
   }
 }
 :root[data-theme="dark"] {
@@ -46,8 +54,10 @@
   --testo-3: #9a998f;
   --serie: #3987e5;
   --serie-tenue: rgba(57, 135, 229, .16);
+  --serie-scelta: rgba(57, 135, 229, .34);
   --avviso: #f0c46a;
   --avviso-sfondo: #2a2210;
+  --logo-filtro: invert(1);
 }
 * { box-sizing: border-box; }
 body {
@@ -61,7 +71,10 @@ h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
   border-bottom: 1px solid var(--bordo); padding-bottom: 12px; margin-bottom: 16px;
 }
 .testata .sotto { margin-bottom: 0; }
+.destra { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+#tema { font-size: 13px; padding: 5px 10px; white-space: nowrap; }
 .marchio { display: flex; align-items: center; gap: 10px; color: var(--testo); text-decoration: none; }
+.marchio-img { width: 30px; height: 30px; filter: var(--logo-filtro); }
 .marchio span { display: flex; flex-direction: column; line-height: 1.2; }
 .marchio b { font-size: 13px; letter-spacing: .14em; }
 .marchio small { color: var(--testo-3); font-size: 12px; }
@@ -102,7 +115,10 @@ th[data-ord]::after { content: " " attr(data-ord); color: var(--testo-3); }
 tbody tr { border-bottom: 1px solid var(--griglia); }
 tbody tr.clic { cursor: pointer; }
 tbody tr.clic:hover { background: var(--serie-tenue); }
-tbody tr.scelto { background: var(--serie-tenue); }
+tbody tr.scelto { background: var(--serie-scelta); box-shadow: inset 4px 0 0 var(--serie); }
+tbody tr.scelto td { font-weight: 650; }
+tbody tr.scelto:hover { background: var(--serie-scelta); }
+select.attivo { border-color: var(--serie); box-shadow: 0 0 0 1px var(--serie); font-weight: 600; }
 tfoot td { font-weight: 650; border-top: 1px solid var(--bordo); }
 .vuoto { color: var(--testo-2); padding: 16px 0; }
 .piccolo { color: var(--testo-3); font-size: 12.5px; }
@@ -130,13 +146,13 @@ footer a { color: inherit; }
       <h1 id="titolo"></h1>
       <p class="sotto" id="sottotitolo"></p>
     </div>
+    <div class="destra">
+    <button id="tema" type="button"></button>
     <a class="marchio" href="https://horizonpeak.it" aria-label="Horizon Peak">
-      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true">
-        <path d="M1 21 L11 5 L16 12 L20 7 L29 21 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M11 5 L13.5 9 L11 8.2 L8.6 9 Z" fill="currentColor"/>
-      </svg>
+      <img class="marchio-img" src="data:image/png;base64,__LOGO__" alt="" width="30" height="30">
       <span><b>HORIZON PEAK</b><small id="aggiornata"></small></span>
     </a>
+    </div>
   </header>
   <div id="avvisi"></div>
 
@@ -357,7 +373,7 @@ footer a { color: inherit; }
       var esclusi = ordinati.filter(function (g) { return g < primoVero; });
       if (esclusi.length) {
         da = primoVero;
-        nota = sost(T.grafico_esclusi, numero(esclusi.length), dataLeggibile(primoVero),
+        nota = sost(esclusi.length === 1 ? T.grafico_escluso : T.grafico_esclusi, numero(esclusi.length), dataLeggibile(primoVero),
           soldi(esclusi.reduce(function (t, g) { return t + perGiorno[g]; }, 0), "USD"));
       }
     }
@@ -506,6 +522,18 @@ footer a { color: inherit; }
     document.title = T.titolo;
     document.getElementById("titolo").textContent = T.titolo;
     document.getElementById("sottotitolo").textContent = T.sottotitolo;
+    var bottone = document.getElementById("tema");
+    function etichettaTema() {
+      var scuro = document.documentElement.getAttribute("data-theme") !== "light";
+      bottone.textContent = scuro ? "☀ " + T.tema_chiaro : "☾ " + T.tema_scuro;
+    }
+    etichettaTema();
+    bottone.addEventListener("click", function () {
+      var nuovo = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", nuovo);
+      try { localStorage.setItem("consumo-claude-tema", nuovo); } catch (e) {}
+      etichettaTema();
+    });
     document.getElementById("aggiornata").textContent = sost(T.aggiornata, dataLeggibile(D.generato));
     document.getElementById("l-periodo").textContent = T.periodo;
     document.getElementById("t-andamento").textContent = T.andamento;
@@ -591,7 +619,9 @@ footer a { color: inherit; }
     avvisi();
     document.getElementById("dal").value = stato.dal || primo;
     document.getElementById("al").value = stato.al || oggi;
-    document.getElementById("progetto").value = stato.progetto || "";
+    var selP = document.getElementById("progetto");
+    selP.value = stato.progetto || "";
+    selP.classList.toggle("attivo", !!stato.progetto);
     var celle = celleScelte();
     riquadri(riepiloga(celle));
     grafico(celle);
