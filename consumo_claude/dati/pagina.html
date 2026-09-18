@@ -101,7 +101,11 @@ button { cursor: pointer; }
 }
 .riquadro .etichetta { color: var(--testo-2); font-size: 13px; }
 .riquadro .valore { font-size: 26px; font-weight: 650; margin-top: 2px; }
-.riquadro .nota { color: var(--testo-3); font-size: 12px; }
+.riquadro .nota {
+  color: var(--testo-2); font-size: 14px; margin-top: 3px;
+  display: flex; justify-content: space-between; gap: 10px;
+}
+.riquadro .nota span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .blocco { margin-bottom: 16px; }
 .due { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 @media (max-width: 820px) { .due { grid-template-columns: 1fr; } }
@@ -124,7 +128,7 @@ tbody tr.scelto:hover { background: var(--serie-scelta); }
 select.attivo, select.attivo:focus { border-color: var(--serie); box-shadow: 0 0 0 1px var(--serie); outline: none; font-weight: 600; }
 tfoot td { font-weight: 650; border-top: 1px solid var(--bordo); }
 .vuoto { color: var(--testo-2); padding: 16px 0; }
-.piccolo { color: var(--testo-3); font-size: 12.5px; }
+.piccolo { color: var(--testo-2); font-size: 14px; text-align: justify; }
 svg text { fill: var(--testo-2); font-size: 11px; }
 .suggerimento {
   position: fixed; pointer-events: none; background: var(--superficie); color: var(--testo);
@@ -337,15 +341,18 @@ footer a { color: inherit; }
     var conv = D.cambio.tasso && D.valuta !== "USD" ? " ≈ " + soldi(r.costo * D.cambio.tasso, D.valuta) : "";
     var u = umano(r);
     var voci = [
-      [T.token, token(r.token), T.letti + " " + token(r.v[I.letti - 2]) + " · " + T.scritti + " " + token(r.v[I.scritti - 2])],
-      [T.costo_claude, soldi(r.costo, "USD"), conv.trim()],
-      [T.ore_persona, dec(r.ore), T.giorni_persona + ": " + dec(r.giorniPersona)],
-      [T.persone, dec(r.personeGruppo), ""],
-      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), tariffa != null ? soldi(tariffa, D.valuta) + "/h" : ""]
+      // La nota sotto il numero: righe [etichetta, valore], valore allineato a destra.
+      [T.token, token(r.token), [[T.letti, token(r.v[I.letti - 2])], [T.scritti, token(r.v[I.scritti - 2])]]],
+      [T.costo_claude, soldi(r.costo, "USD"), conv ? [[T.in_valuta, conv.trim()]] : []],
+      [T.ore_persona, dec(r.ore), [[T.giorni_persona, dec(r.giorniPersona)]]],
+      [T.persone, dec(r.personeGruppo), []],
+      [T.costo_lavoro, u == null ? "-" : soldi(u, D.valuta), tariffa != null ? [[T.tariffa, soldi(tariffa, D.valuta) + "/h"]] : []]
     ];
     document.getElementById("riquadri").innerHTML = voci.map(function (v) {
       return '<div class="riquadro"><div class="etichetta">' + esc(v[0]) + '</div><div class="valore">' + esc(v[1]) +
-        '</div><div class="nota">' + esc(v[2]) + "</div></div>";
+        "</div>" + v[2].map(function (x) {
+          return '<div class="nota"><span>' + esc(x[0]) + "</span><span>" + esc(x[1]) + "</span></div>";
+        }).join("") + "</div>";
     }).join("");
   }
 
